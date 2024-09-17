@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_changed_at ON audit_log(changed_at);
 CREATE OR REPLACE FUNCTION audit_insert() RETURNS TRIGGER AS $$
 BEGIN
     NEW.created_at := COALESCE(NEW.created_at, CURRENT_TIMESTAMP);
-    NEW.updated_at := CURRENT_TIMESTAMP;
+    -- NEW.updated_at := CURRENT_TIMESTAMP;
 
     -- Insert audit log
     INSERT INTO audit_log (
