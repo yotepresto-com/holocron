@@ -27,8 +27,8 @@ BEGIN
 END
 $$;
 
--- System Users
-CREATE TABLE IF NOT EXISTS system_user (
+-- Users
+CREATE TABLE IF NOT EXISTS "user" (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS role_permission (
 -- Role Assignment
 CREATE TABLE IF NOT EXISTS user_role (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES system_user(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
     role_id INTEGER NOT NULL REFERENCES role(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     UNIQUE (user_id, role_id)
@@ -77,11 +77,11 @@ CREATE OR REPLACE FUNCTION has_permission(
 BEGIN
     RETURN EXISTS (
         SELECT 1
-        FROM system_user su
-        JOIN user_role ur ON su.id = ur.user_id
+        FROM "user" u
+        JOIN user_role ur ON u.id = ur.user_id
         JOIN role_permission rp ON ur.role_id = rp.role_id
-        WHERE su.id = _user_id
-          AND su.is_active = TRUE
+        WHERE u.id = _user_id
+          AND u.is_active = TRUE
           AND rp.permission = _permission
     );
 END;
