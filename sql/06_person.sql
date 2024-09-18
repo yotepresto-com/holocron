@@ -32,6 +32,30 @@ FOR EACH ROW EXECUTE FUNCTION prevent_updates();
 CREATE INDEX IF NOT EXISTS idx_curp_natural_details ON natural_person_details (curp);
 CREATE INDEX IF NOT EXISTS idx_rfc_natural_details ON natural_person_details (rfc);
 
+CREATE OR REPLACE FUNCTION natural_person_details_tgr_fn() RETURNS TRIGGER AS $$
+DECLARE
+    full_name TEXT;
+BEGIN
+    full_name := upper(trim(replace(format('%s %s %s', NEW.name, NEW.first_last_name, NEW.second_last_name), '  ', ' ')));
+
+    INSERT INTO blacklist_search (person_id, blacklist_person_id, match, match_score, search_date)
+    SELECT new.person_id,bl_npd.id, true, 1, CURRENT_DATE
+    FROM blacklist_natural_person_details bl_npd
+    WHERE upper(trim(replace(format('%s %s %s', bl_npd.name, bl_npd.first_last_name, bl_npd.second_last_name), '  ', ' '))) = full_name;
+
+    -- TODO: buscar por curp, rfc y fuzzy search
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS natural_person_details_tgr  ON natural_person_details;
+
+CREATE TRIGGER natural_person_details_tgr
+AFTER INSERT ON natural_person_details
+FOR EACH ROW EXECUTE FUNCTION natural_person_details_tgr_fn();
+
+
 
 CREATE TABLE IF NOT EXISTS juridical_person_details (
     person_id INTEGER NOT NULL REFERENCES person(id) ON DELETE CASCADE,
