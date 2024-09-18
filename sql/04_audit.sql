@@ -35,7 +35,6 @@ BEGIN
         NEW.updated_at := CURRENT_TIMESTAMP;
     end if;
 
-
     -- Insert audit log
     INSERT INTO audit_log (
         table_name, 
