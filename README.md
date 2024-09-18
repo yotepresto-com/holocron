@@ -38,7 +38,8 @@ El frontend del sistema está construido en **React**, proporcionando una interf
 ### Requisitos
 
 - **Python 3.12+**
-- **PostgreSQL 15**
+- **PostgreSQL 16**
+- **PgFormatter**
 - **Node.js y npm** (para el frontend)
 
 ### Configuración
