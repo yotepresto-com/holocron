@@ -13,14 +13,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION create_test_person() RETURNS person AS $$
+CREATE OR REPLACE FUNCTION create_test_person(_curp TEXT default 'VARD123456AAAAAA12', _rfc TEXT default 'AAAA123456AAA', _name TEXT default 'John', _first_last_name TEXT default 'Doe', _second_last_name TEXT default 'Smith', _date_of_birth DATE default '1990-01-01'::DATE) RETURNS person AS $$
 DECLARE
     _person person;
 BEGIN
     INSERT INTO person (type) values ('natural') RETURNING * INTO _person;
 
     INSERT INTO natural_person_details (person_id, curp, rfc, name, first_last_name, second_last_name, date_of_birth)
-    VALUES (_person.id, 'VARD123456AAAAAA12', 'AAAA123456AAA', 'John', 'Doe', 'Smith', '1990-01-01');
+    VALUES (_person.id, _curp, _rfc, _name, _first_last_name, _second_last_name, _date_of_birth);
 
     RETURN _person;
 END;
@@ -38,7 +38,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION create_test_blacklist_person(_blacklist_id INTEGER) RETURNS blacklist_person AS $$
+CREATE OR REPLACE FUNCTION create_test_blacklist_person(_blacklist_id INTEGER, _curp TEXT default 'VARD123456AAAAAA12', _rfc TEXT default 'AAAA123456AAA', _name TEXT default 'John', _first_last_name TEXT default 'Doe', _second_last_name TEXT default 'Smith', _date_of_birth DATE default '1990-01-01'::DATE) RETURNS blacklist_person AS $$
 DECLARE
     blp blacklist_person;
 BEGIN
@@ -47,7 +47,7 @@ BEGIN
     RETURNING * INTO blp;
 
     INSERT INTO blacklist_natural_person_details (id, curp, rfc, name, first_last_name, second_last_name, date_of_birth)
-    VALUES (blp.id, 'VARD123456AAAAAA12', 'AAAA123456AAA', 'John', 'Doe', 'Smith', '1990-01-01');
+    VALUES (blp.id, _curp, _rfc, _name, _first_last_name, _second_last_name, _date_of_birth);
 
     RETURN blp;
 END;

@@ -80,9 +80,11 @@ BEGIN
     INSERT INTO blacklist_search (person_id, blacklist_person_id, match, match_score, search_date)
     SELECT npd.person_id, new.id, true, 1, CURRENT_DATE
     FROM natural_person_details npd
-    WHERE upper(trim(replace(format('%s %s %s', npd.name, npd.first_last_name, npd.second_last_name), '  ', ' '))) = full_name;
+    WHERE upper(trim(replace(format('%s %s %s', npd.name, npd.first_last_name, npd.second_last_name), '  ', ' '))) = full_name
+        OR npd.curp = NEW.curp
+        OR npd.rfc = NEW.rfc;
 
-    -- TODO: buscar por curp, rfc y fuzzy search
+    -- TODO: fuzzy search
 
     RETURN NEW;
 END;
