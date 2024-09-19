@@ -11,6 +11,8 @@ BEGIN
     id INTO _user_id
   FROM
     create_test_user ();
+  PERFORM
+    insert_configs ();
   -- mismo nombre y diferente RFC y CURP
   SELECT
     id INTO _person_id
@@ -106,6 +108,8 @@ BEGIN
     id INTO _blacklist_id
   FROM
     create_test_blacklist ();
+  PERFORM
+    insert_configs ();
   -- mismo nombre y diferente rfc y curp
   SELECT
     id INTO _blacklist_person_id

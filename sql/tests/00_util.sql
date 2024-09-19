@@ -68,3 +68,13 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION insert_configs ()
+  RETURNS VOID
+  AS $$
+BEGIN
+  INSERT INTO config (name, value)
+    VALUES ('max_string_distance_to_match', '3');
+END;
+$$
+LANGUAGE plpgsql;
