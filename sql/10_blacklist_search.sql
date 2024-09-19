@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS blacklist_search (
   id SERIAL PRIMARY KEY,
   person_id INTEGER REFERENCES person (id),

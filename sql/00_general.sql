@@ -35,3 +35,5 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
+
+CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;

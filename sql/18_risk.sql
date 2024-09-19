@@ -1,4 +1,3 @@
-
 DO $$
 BEGIN
   IF NOT EXISTS (

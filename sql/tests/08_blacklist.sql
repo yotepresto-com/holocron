@@ -68,6 +68,23 @@ END IF;
       AND MATCH) THEN
   RAISE EXCEPTION 'Registro en blacklist_search no encontrado por RFC';
 END IF;
+  -- diferente RFC y CURP con nombre parecido
+  SELECT
+    id INTO _blacklist_person_id
+  FROM
+    create_test_blacklist_person (_blacklist_id, _curp := 'VARD123456BBBAAA12', _rfc := 'AAAA123456BBB', _name := 'Johnn');
+  IF NOT EXISTS (
+    SELECT
+      *
+    FROM
+      blacklist_search
+    WHERE
+      person_id = _person_id
+      AND blacklist_person_id = _blacklist_person_id
+      AND MATCH
+      AND match_score < 1) THEN
+  RAISE EXCEPTION 'Registro en blacklist_search no encontrado por nombre parecido';
+END IF;
 END;
 $$;
 ROLLBACK;
@@ -141,6 +158,23 @@ END IF;
       AND blacklist_person_id = _blacklist_person_id
       AND MATCH) THEN
   RAISE EXCEPTION 'Registro en blacklist_search no encontrado por RFC';
+END IF;
+  -- diferente RFC y CURP con nombre parecido
+  SELECT
+    id INTO _person_id
+  FROM
+    create_test_person (_curp := 'VERD123456BBBAAA12', _rfc := 'AAAA123456BBB', _name := 'Johnn');
+  IF NOT EXISTS (
+    SELECT
+      *
+    FROM
+      blacklist_search
+    WHERE
+      person_id = _person_id
+      AND blacklist_person_id = _blacklist_person_id
+      AND MATCH
+      AND match_score < 1) THEN
+  RAISE EXCEPTION 'Registro en blacklist_search no encontrado por nombre parecido';
 END IF;
 END;
 $$;

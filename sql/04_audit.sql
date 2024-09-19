@@ -1,4 +1,3 @@
-
 -- Create the operation_type enum
 DO $$
 BEGIN

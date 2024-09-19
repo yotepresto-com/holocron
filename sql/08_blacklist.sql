@@ -1,4 +1,3 @@
-
 -- Blacklists
 CREATE TABLE IF NOT EXISTS blacklist (
   id SERIAL PRIMARY KEY,
@@ -75,6 +74,7 @@ CREATE OR REPLACE FUNCTION blacklist_natural_person_details_tgr_fn ()
   AS $$
 DECLARE
   full_name TEXT;
+  _row_count INTEGER;
 BEGIN
   full_name := upper(trim(replace(format('%s %s %s', NEW.name, NEW.first_last_name, NEW.second_last_name),
     '  ', ' ')));
@@ -92,7 +92,24 @@ BEGIN
       '  ', ' '))) = full_name
     OR npd.curp = NEW.curp
     OR npd.rfc = NEW.rfc;
-  -- TODO: fuzzy search
+  GET DIAGNOSTICS _row_count := ROW_COUNT;
+  IF _row_count = 0 THEN
+    -- TODO: cambiar la distancia mímina por una configuración
+    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
+    SELECT
+      npd.person_id,
+      NEW.id,
+      TRUE,
+      1.0 * (length(full_name) - levenshtein (upper(trim(replace(format('%s %s %s', npd.name,
+	npd.first_last_name, npd.second_last_name), '  ', ' '))), full_name)) /
+	length(full_name),
+      CURRENT_DATE
+    FROM
+      natural_person_details npd
+    WHERE
+      levenshtein (upper(trim(replace(format('%s %s %s', npd.name, npd.first_last_name,
+	npd.second_last_name), '  ', ' '))), full_name) < 3;
+  END IF;
   RETURN NEW;
 END;
 $$
@@ -124,5 +141,5 @@ CREATE TRIGGER prevent_blacklist_juridical_person_updates
 
 -- Add Audit Triggers
 SELECT
-  add_audit_triggers (ARRAY['blacklist', 'blacklist_person', 'blacklist_person_attribute', 'blacklist_person_attribute_value', 'blacklist_natural_person_details',
-    'blacklist_juridical_person_details']);
+  add_audit_triggers (ARRAY['blacklist', 'blacklist_person', 'blacklist_person_attribute', 'blacklist_person_attribute_value',
+    'blacklist_natural_person_details', 'blacklist_juridical_person_details']);

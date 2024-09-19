@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS unusual_operations (
   id SERIAL PRIMARY KEY,
   operation_date DATE NOT NULL,

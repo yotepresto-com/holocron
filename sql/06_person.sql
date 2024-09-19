@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS person (
   id SERIAL PRIMARY KEY,
   type person_type NOT NULL,
@@ -43,6 +42,7 @@ CREATE OR REPLACE FUNCTION natural_person_details_tgr_fn ()
   AS $$
 DECLARE
   full_name TEXT;
+  _row_count INTEGER;
 BEGIN
   full_name := upper(trim(replace(format('%s %s %s', NEW.name, NEW.first_last_name, NEW.second_last_name),
     '  ', ' ')));
@@ -60,7 +60,24 @@ BEGIN
       '  ', ' '))) = full_name
     OR bl_npd.curp = NEW.curp
     OR bl_npd.rfc = NEW.rfc;
-  -- TODO: buscar por fuzzy search
+  GET DIAGNOSTICS _row_count := ROW_COUNT;
+  IF _row_count = 0 THEN
+    -- TODO: cambiar la distancia mímina por una configuración
+    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
+    SELECT
+      NEW.person_id,
+      bl_npd.id,
+      TRUE,
+      1.0 * (length(full_name) - levenshtein (upper(trim(replace(format('%s %s %s', bl_npd.name,
+	bl_npd.first_last_name, bl_npd.second_last_name), '  ', ' '))), full_name)) /
+	length(full_name),
+      CURRENT_DATE
+    FROM
+      blacklist_natural_person_details bl_npd
+    WHERE
+      levenshtein (upper(trim(replace(format('%s %s %s', bl_npd.name, bl_npd.first_last_name,
+	bl_npd.second_last_name), '  ', ' '))), full_name) < 3;
+  END IF;
   RETURN NEW;
 END;
 $$

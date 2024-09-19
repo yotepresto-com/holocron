@@ -1,4 +1,3 @@
-
 -- Person Profiles Definition
 CREATE TABLE IF NOT EXISTS profile_type (
   id SERIAL PRIMARY KEY,
