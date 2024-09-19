@@ -45,8 +45,13 @@ async def update_user(user_id: int, user_update: UserUpdate, session: Session = 
     for key, value in user_update.dict(exclude_unset=True).items():
         setattr(user, key, value)
 
-    session.commit()
-    session.refresh(user)
+    try:
+        session.commit()
+        session.refresh(user)
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Error updating user: {}".format(str(e)))
+
     return user
 
 
