@@ -1,3 +1,4 @@
+
 -- Create the operation_type enum
 DO $$
 BEGIN
@@ -24,7 +25,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
   operation_type operation_type_enum NOT NULL,
   record_id INTEGER NOT NULL,
   changed_data JSONB,
-  changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   changed_by INTEGER NOT NULL REFERENCES "user" (id) ON DELETE SET NULL
 );
 

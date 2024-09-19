@@ -62,7 +62,7 @@ pip install -r requirements.txt
 
 4.	Inicia el servidor de FastAPI:
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 5000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 5500
 ```
 
 5.	Para el frontend, navega a la carpeta frontend e instala las dependencias:

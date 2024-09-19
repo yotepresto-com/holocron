@@ -1,3 +1,4 @@
+
 -- Person Profiles Definition
 CREATE TABLE IF NOT EXISTS profile_type (
   id SERIAL PRIMARY KEY,
@@ -41,7 +42,8 @@ CREATE TABLE IF NOT EXISTS profile_data (
   id SERIAL PRIMARY KEY,
   profile_id INTEGER NOT NULL REFERENCES profile (id) ON DELETE CASCADE,
   attribute_id INTEGER NOT NULL REFERENCES profile_attribute (id) ON DELETE CASCADE,
-  value TEXT NOT NULL
+  value TEXT NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL
   -- TODO: check the consistency of the profile -> profily_type and attribute -> profile_type -> profile_type
 );
 

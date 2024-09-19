@@ -1,3 +1,4 @@
+
 CREATE TABLE IF NOT EXISTS unusual_operations (
   id SERIAL PRIMARY KEY,
   operation_date DATE NOT NULL,
@@ -5,7 +6,7 @@ CREATE TABLE IF NOT EXISTS unusual_operations (
   amount DECIMAL(15, 2) NOT NULL,
   description TEXT,
   alert_level VARCHAR(20),
-  reported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  reported_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS relevant_operations (
@@ -15,5 +16,5 @@ CREATE TABLE IF NOT EXISTS relevant_operations (
   amount DECIMAL(15, 2) NOT NULL,
   operation_type VARCHAR(50),
   details TEXT,
-  reported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  reported_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

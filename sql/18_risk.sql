@@ -1,3 +1,4 @@
+
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -22,8 +23,8 @@ CREATE TABLE IF NOT EXISTS risk_matrix (
   profile_type_id INTEGER NOT NULL REFERENCES profile_type (id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   status risk_matrix_status NOT NULL DEFAULT 'development',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tabla para almacenar los valores de riesgo y pesos para cada atributo en una matriz

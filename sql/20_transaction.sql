@@ -1,10 +1,11 @@
+
 CREATE TABLE IF NOT EXISTS transaction_type (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   product_type_id INTEGER REFERENCES product_type (id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_transaction_type_product_type ON transaction_type (product_type_id);
@@ -18,7 +19,7 @@ CREATE TABLE IF NOT EXISTS TRANSACTION (
   counterpart VARCHAR(255) NOT NULL,
   amount NUMERIC(10, 2) NOT NULL,
   effective_date DATE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   -- TODO: check product_type match with transaction type.
 );
 

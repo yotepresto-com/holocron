@@ -1,10 +1,11 @@
+
 CREATE TABLE IF NOT EXISTS person (
   id SERIAL PRIMARY KEY,
   type person_type NOT NULL,
   active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  deleted_at TIMESTAMP
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  deleted_at TIMESTAMPTZ
 );
 
 DROP TRIGGER IF EXISTS prevent_person_deletion ON person;
@@ -22,7 +23,7 @@ CREATE TABLE IF NOT EXISTS natural_person_details (
   first_last_name TEXT NOT NULL,
   second_last_name TEXT,
   date_of_birth DATE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   PRIMARY KEY (person_id)
 );
 
@@ -77,7 +78,7 @@ CREATE TABLE IF NOT EXISTS juridical_person_details (
   rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
   legal_name TEXT NOT NULL,
   incorporation_date DATE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   PRIMARY KEY (person_id)
 );
 

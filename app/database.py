@@ -1,30 +1,16 @@
+# app/database.py (1-15)
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-import os
+from sqlalchemy.orm import sessionmaker, declarative_base
+from app.core.config import settings
 
-# Get database connection details from environment variables
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_NAME = os.getenv("DB_NAME")
-
-# Construct the database URL
-SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
-
-# Create the SQLAlchemy engine
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-
-# Create a SessionLocal class
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Create a Base class
+engine = create_engine(settings.DATABASE_URL, echo=True)
 Base = declarative_base()
+SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
-# Dependency to get the database session
-def get_db():
-    db = SessionLocal()
+
+def get_session():
+    session = SessionLocal()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        session.close()

@@ -1,4 +1,7 @@
 fastapi
+pydantic[email]
+pydantic_settings
 sqlalchemy
 dotenvx
-psycopg2
+asyncpg
+uvicorn

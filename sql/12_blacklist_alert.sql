@@ -1,3 +1,4 @@
+
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -23,8 +24,8 @@ CREATE TABLE IF NOT EXISTS blacklist_alert (
   blacklist_search_id INTEGER NOT NULL REFERENCES blacklist_search (id),
   state alert_state NOT NULL,
   date DATE NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_blacklist_alert_search ON blacklist_alert (blacklist_search_id);
