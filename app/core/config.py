@@ -13,8 +13,5 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 
-    class Config:
-        case_sensitive = True
-
 
 settings = Settings()

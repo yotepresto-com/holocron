@@ -6,13 +6,14 @@ from .database import engine
 metadata = MetaData()
 metadata.reflect(bind=engine)
 AutomapBase = automap_base()
-AutomapBase.prepare(engine, reflect=True)
+AutomapBase.prepare(autoload_with=engine)
 
 # Authorization
 User = AutomapBase.classes.user
 Role = AutomapBase.classes.role
 RolePermission = AutomapBase.classes.role_permission
 UserRole = AutomapBase.classes.user_role
+
 
 # Blacklist
 Blacklist = AutomapBase.classes.blacklist
@@ -49,4 +50,3 @@ Transaction = AutomapBase.classes.transaction
 # Transaction alerts
 UnusualOperations = AutomapBase.classes.unusual_operations
 RelevantOperations = AutomapBase.classes.relevant_operations
-

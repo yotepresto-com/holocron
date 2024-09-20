@@ -46,7 +46,7 @@ El frontend del sistema está construido en **React**, proporcionando una interf
 
 1. Clona el repositorio:
 ```bash
-git clone https://github.com/tu-repositorio/holocron.git
+git clone https://github.com/yotepresto-com/holocron.git
 cd holocron
 ```
 

@@ -2,3 +2,4 @@ pip-tools
 flake8
 httpx
 pytest
+black

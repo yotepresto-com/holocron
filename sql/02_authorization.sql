@@ -7,12 +7,21 @@ BEGIN
     FROM
       pg_type
     WHERE
-      typname = 'system_permission') THEN
-  CREATE TYPE system_permission AS ENUM (
+      typname = 'permission_type') THEN
+  CREATE TYPE permission_type AS ENUM (
     'create_user',
     'read_user',
     'update_user',
     'delete_user',
+    'create_role',
+    'read_role',
+    'update_role',
+    'delete_role',
+    'read_permission',
+    'assign_permission',
+    'remove_permission',
+    'assign_role',
+    'remove_role',
     'create_profile',
     'read_profile',
     'update_profile',
@@ -24,10 +33,7 @@ BEGIN
     'create_risk_matrix',
     'read_risk_matrix',
     'update_risk_matrix',
-    'delete_risk_matrix',
-    'view_reports',
-    'manage_blacklist',
-    'manage_roles'
+    'delete_risk_matrix'
 );
 END IF;
 END
@@ -57,7 +63,7 @@ CREATE TABLE IF NOT EXISTS ROLE (
 CREATE TABLE IF NOT EXISTS role_permission (
   id SERIAL PRIMARY KEY,
   role_id INTEGER NOT NULL REFERENCES ROLE (id) ON DELETE CASCADE,
-  permission system_permission NOT NULL,
+  permission permission_type NOT NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   UNIQUE (role_id, permission)
 );
@@ -78,7 +84,7 @@ CREATE INDEX IF NOT EXISTS idx_user_role_user ON user_role (user_id);
 CREATE INDEX IF NOT EXISTS idx_user_role_role ON user_role (role_id);
 
 -- Permission check
-CREATE OR REPLACE FUNCTION has_permission (_user_id INTEGER, _permission system_permission)
+CREATE OR REPLACE FUNCTION has_permission (_user_id INTEGER, _permission permission_type)
   RETURNS BOOLEAN
   AS $$
 BEGIN
