@@ -75,7 +75,10 @@ CREATE OR REPLACE FUNCTION blacklist_natural_person_details_tgr_fn ()
 DECLARE
   full_name TEXT;
   _row_count INTEGER;
+  min_distance INTEGER;
 BEGIN
+  min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
+
   full_name := upper(trim(replace(format('%s %s %s', NEW.name, NEW.first_last_name, NEW.second_last_name),
     '  ', ' ')));
   INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
@@ -92,9 +95,10 @@ BEGIN
       '  ', ' '))) = full_name
     OR npd.curp = NEW.curp
     OR npd.rfc = NEW.rfc;
+
   GET DIAGNOSTICS _row_count := ROW_COUNT;
+
   IF _row_count = 0 THEN
-    -- TODO: cambiar la distancia mímina por una configuración
     INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
     SELECT
       npd.person_id,
@@ -108,7 +112,7 @@ BEGIN
       natural_person_details npd
     WHERE
       levenshtein (upper(trim(replace(format('%s %s %s', npd.name, npd.first_last_name,
-	npd.second_last_name), '  ', ' '))), full_name) < 3;
+	npd.second_last_name), '  ', ' '))), full_name) < min_distance;
   END IF;
   RETURN NEW;
 END;
