@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS natural_person_details (
   second_last_name TEXT,
   date_of_birth DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  full_name TEXT GENERATED ALWAYS AS (upper(trim(replace(name || coalesce(' ' || first_last_name, '') || coalesce(' ' || second_last_name, ''),
+    '  ', ' ')))) STORED,
   PRIMARY KEY (person_id)
 );
 
@@ -33,22 +35,21 @@ CREATE TRIGGER prevent_natural_person_updates
   FOR EACH ROW
   EXECUTE FUNCTION prevent_updates ();
 
-CREATE INDEX IF NOT EXISTS idx_curp_natural_details ON natural_person_details (curp);
-
-CREATE INDEX IF NOT EXISTS idx_rfc_natural_details ON natural_person_details (rfc);
+CREATE INDEX IF NOT EXISTS idx_curp_natural_details ON natural_person_details USING HASH (curp);
+CREATE INDEX IF NOT EXISTS idx_rfc_natural_details ON natural_person_details USING HASH (rfc);
+CREATE INDEX IF NOT EXISTS idx_full_name_natural_details ON natural_person_details USING HASH (full_name);
+CREATE INDEX IF NOT EXISTS idx_full_name_trgm_natural_details ON natural_person_details USING GIN (full_name gin_trgm_ops);
 
 CREATE OR REPLACE FUNCTION natural_person_details_tgr_fn ()
   RETURNS TRIGGER
   AS $$
 DECLARE
-  full_name TEXT;
   _row_count INTEGER;
   min_distance INTEGER;
 BEGIN
   min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
+  raise notice 'aaaa %', min_distance; --DELETE
 
-  full_name := upper(trim(replace(format('%s %s %s', NEW.name, NEW.first_last_name, NEW.second_last_name),
-    '  ', ' ')));
   INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
   SELECT
     NEW.person_id,
@@ -59,8 +60,7 @@ BEGIN
   FROM
     blacklist_natural_person_details bl_npd
   WHERE
-    upper(trim(replace(format('%s %s %s', bl_npd.name, bl_npd.first_last_name, bl_npd.second_last_name),
-      '  ', ' '))) = full_name
+    bl_npd.full_name = NEW.full_name
     OR bl_npd.curp = NEW.curp
     OR bl_npd.rfc = NEW.rfc;
 
@@ -72,15 +72,12 @@ BEGIN
       NEW.person_id,
       bl_npd.id,
       TRUE,
-      1.0 * (length(full_name) - levenshtein (upper(trim(replace(format('%s %s %s', bl_npd.name,
-	bl_npd.first_last_name, bl_npd.second_last_name), '  ', ' '))), full_name)) /
-	length(full_name),
+      1.0 * (length(NEW.full_name) - levenshtein (bl_npd.full_name, NEW.full_name)) / length(NEW.full_name),
       CURRENT_DATE
     FROM
       blacklist_natural_person_details bl_npd
     WHERE
-      levenshtein (upper(trim(replace(format('%s %s %s', bl_npd.name, bl_npd.first_last_name,
-	bl_npd.second_last_name), '  ', ' '))), full_name) < min_distance;
+      levenshtein (bl_npd.full_name, NEW.full_name) < min_distance;
   END IF;
 
   RETURN NEW;

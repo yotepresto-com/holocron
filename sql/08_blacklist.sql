@@ -59,8 +59,16 @@ CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
   second_last_name TEXT,
   date_of_birth DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  full_name TEXT GENERATED ALWAYS AS (upper(trim(replace(name || coalesce(' ' || first_last_name, '') || coalesce(' ' || second_last_name, ''),
+    '  ', ' ')))) STORED,
   PRIMARY KEY (id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_curp_blacklist_natural_details ON blacklist_natural_person_details USING HASH (curp);
+CREATE INDEX IF NOT EXISTS idx_rfc_blacklist_natural_details ON blacklist_natural_person_details USING HASH (rfc);
+CREATE INDEX IF NOT EXISTS idx_full_name_blacklist_natural_details ON blacklist_natural_person_details USING HASH (full_name);
+CREATE INDEX IF NOT EXISTS idx_full_name_trgm_blacklist_natural_details ON blacklist_natural_person_details USING GIN (full_name gin_trgm_ops);
+
 
 DROP TRIGGER IF EXISTS prevent_blacklist_natural_person_updates ON blacklist_natural_person_details;
 
@@ -73,14 +81,11 @@ CREATE OR REPLACE FUNCTION blacklist_natural_person_details_tgr_fn ()
   RETURNS TRIGGER
   AS $$
 DECLARE
-  full_name TEXT;
   _row_count INTEGER;
   min_distance INTEGER;
 BEGIN
   min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
 
-  full_name := upper(trim(replace(format('%s %s %s', NEW.name, NEW.first_last_name, NEW.second_last_name),
-    '  ', ' ')));
   INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
   SELECT
     npd.person_id,
@@ -91,8 +96,7 @@ BEGIN
   FROM
     natural_person_details npd
   WHERE
-    upper(trim(replace(format('%s %s %s', npd.name, npd.first_last_name, npd.second_last_name),
-      '  ', ' '))) = full_name
+    npd.full_name = NEW.full_name
     OR npd.curp = NEW.curp
     OR npd.rfc = NEW.rfc;
 
@@ -104,15 +108,12 @@ BEGIN
       npd.person_id,
       NEW.id,
       TRUE,
-      1.0 * (length(full_name) - levenshtein (upper(trim(replace(format('%s %s %s', npd.name,
-	npd.first_last_name, npd.second_last_name), '  ', ' '))), full_name)) /
-	length(full_name),
+      1.0 * (length(NEW.full_name) - levenshtein (npd.full_name, NEW.full_name)) / length(NEW.full_name),
       CURRENT_DATE
     FROM
       natural_person_details npd
     WHERE
-      levenshtein (upper(trim(replace(format('%s %s %s', npd.name, npd.first_last_name,
-	npd.second_last_name), '  ', ' '))), full_name) < min_distance;
+      levenshtein (npd.full_name, NEW.full_name) < min_distance;
   END IF;
   RETURN NEW;
 END;
