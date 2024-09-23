@@ -48,15 +48,15 @@ DECLARE
   min_distance INTEGER;
 BEGIN
   min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
-  raise notice 'aaaa %', min_distance; --DELETE
 
-  INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
+  INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
   SELECT
     NEW.person_id,
     bl_npd.id,
     TRUE,
     1,
-    CURRENT_DATE
+    CURRENT_DATE,
+    json_build_object('rfc_match', bl_npd.rfc = NEW.rfc, 'curp_match', bl_npd.curp = NEW.curp, 'name_match', bl_npd.full_name = NEW.full_name)
   FROM
     blacklist_natural_person_details bl_npd
   WHERE
@@ -67,13 +67,14 @@ BEGIN
   GET DIAGNOSTICS _row_count := ROW_COUNT;
 
   IF _row_count = 0 THEN
-    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
+    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
     SELECT
       NEW.person_id,
       bl_npd.id,
       TRUE,
       1.0 * (length(NEW.full_name) - levenshtein (bl_npd.full_name, NEW.full_name)) / length(NEW.full_name),
-      CURRENT_DATE
+      CURRENT_DATE,
+      json_build_object('rfc_match', bl_npd.rfc = NEW.rfc, 'curp_match', bl_npd.curp = NEW.curp, 'name_match', TRUE, 'levenshtein_distance', levenshtein (bl_npd.full_name, NEW.full_name))
     FROM
       blacklist_natural_person_details bl_npd
     WHERE

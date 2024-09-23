@@ -86,13 +86,14 @@ DECLARE
 BEGIN
   min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
 
-  INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
+  INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
   SELECT
     npd.person_id,
     NEW.id,
     TRUE,
     1,
-    CURRENT_DATE
+    CURRENT_DATE,
+    jsonb_build_object('rfc_match', npd.rfc = NEW.rfc, 'curp_match', npd.curp = NEW.curp, 'name_match', npd.full_name = NEW.full_name)
   FROM
     natural_person_details npd
   WHERE
@@ -103,13 +104,14 @@ BEGIN
   GET DIAGNOSTICS _row_count := ROW_COUNT;
 
   IF _row_count = 0 THEN
-    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
+    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
     SELECT
       npd.person_id,
       NEW.id,
       TRUE,
       1.0 * (length(NEW.full_name) - levenshtein (npd.full_name, NEW.full_name)) / length(NEW.full_name),
-      CURRENT_DATE
+      CURRENT_DATE,
+      jsonb_build_object('rfc_match', npd.rfc = NEW.rfc, 'curp_match', npd.curp = NEW.curp, 'name_match', TRUE, 'levenshtein_distance', levenshtein (npd.full_name, NEW.full_name))
     FROM
       natural_person_details npd
     WHERE
