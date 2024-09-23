@@ -59,16 +59,21 @@ CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
   second_last_name TEXT,
   date_of_birth DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  full_name TEXT GENERATED ALWAYS AS (upper(trim(replace(name || coalesce(' ' || first_last_name, '') || coalesce(' ' || second_last_name, ''),
-    '  ', ' ')))) STORED,
+  full_name TEXT GENERATED ALWAYS AS (upper(trim(replace(NAME || coalesce(' ' || first_last_name,
+    '') || coalesce(' ' || second_last_name, ''), '  ', ' '))))
+    STORED,
   PRIMARY KEY (id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_curp_blacklist_natural_details ON blacklist_natural_person_details USING HASH (curp);
-CREATE INDEX IF NOT EXISTS idx_rfc_blacklist_natural_details ON blacklist_natural_person_details USING HASH (rfc);
-CREATE INDEX IF NOT EXISTS idx_full_name_blacklist_natural_details ON blacklist_natural_person_details USING HASH (full_name);
-CREATE INDEX IF NOT EXISTS idx_full_name_trgm_blacklist_natural_details ON blacklist_natural_person_details USING GIN (full_name gin_trgm_ops);
 
+CREATE INDEX IF NOT EXISTS idx_rfc_blacklist_natural_details ON blacklist_natural_person_details USING HASH (rfc);
+
+CREATE INDEX IF NOT EXISTS idx_full_name_blacklist_natural_details ON blacklist_natural_person_details USING
+  HASH (full_name);
+
+CREATE INDEX IF NOT EXISTS idx_full_name_trgm_blacklist_natural_details ON blacklist_natural_person_details
+  USING GIN (full_name gin_trgm_ops);
 
 DROP TRIGGER IF EXISTS prevent_blacklist_natural_person_updates ON blacklist_natural_person_details;
 
@@ -83,39 +88,67 @@ CREATE OR REPLACE FUNCTION blacklist_natural_person_details_tgr_fn ()
 DECLARE
   _row_count INTEGER;
   min_distance INTEGER;
+  save_all_comparison_results BOOLEAN;
 BEGIN
-  min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
-
-  INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
-  SELECT
-    npd.person_id,
-    NEW.id,
-    TRUE,
-    1,
-    CURRENT_DATE,
-    jsonb_build_object('rfc_match', npd.rfc = NEW.rfc, 'curp_match', npd.curp = NEW.curp, 'name_match', npd.full_name = NEW.full_name)
-  FROM
-    natural_person_details npd
-  WHERE
-    npd.full_name = NEW.full_name
-    OR npd.curp = NEW.curp
-    OR npd.rfc = NEW.rfc;
-
-  GET DIAGNOSTICS _row_count := ROW_COUNT;
-
-  IF _row_count = 0 THEN
+  min_distance := (
+    SELECT
+      value::INTEGER
+    FROM
+      config
+    WHERE
+      name = 'max_string_distance_to_match');
+  save_all_comparison_results := (
+    SELECT
+      value::BOOLEAN
+    FROM
+      config
+    WHERE
+      name = 'save_all_comparison_results');
+  IF save_all_comparison_results IS TRUE THEN
     INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
     SELECT
       npd.person_id,
       NEW.id,
       TRUE,
-      1.0 * (length(NEW.full_name) - levenshtein (npd.full_name, NEW.full_name)) / length(NEW.full_name),
+      1,
       CURRENT_DATE,
-      jsonb_build_object('rfc_match', npd.rfc = NEW.rfc, 'curp_match', npd.curp = NEW.curp, 'name_match', TRUE, 'levenshtein_distance', levenshtein (npd.full_name, NEW.full_name))
+      jsonb_build_object('rfc_match', npd.rfc = NEW.rfc, 'curp_match', npd.curp = NEW.curp,
+	'name_match', levenshtein (npd.full_name, NEW.full_name) < min_distance, 'levenshtein_distance', levenshtein
+	(npd.full_name, NEW.full_name))
+    FROM
+      natural_person_details npd;
+  ELSE
+    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
+    SELECT
+      npd.person_id,
+      NEW.id,
+      TRUE,
+      1,
+      CURRENT_DATE,
+      jsonb_build_object('rfc_match', npd.rfc = NEW.rfc, 'curp_match', npd.curp = NEW.curp,
+	'name_match', npd.full_name = NEW.full_name)
     FROM
       natural_person_details npd
     WHERE
-      levenshtein (npd.full_name, NEW.full_name) < min_distance;
+      npd.full_name = NEW.full_name
+      OR npd.curp = NEW.curp
+      OR npd.rfc = NEW.rfc;
+    GET DIAGNOSTICS _row_count := ROW_COUNT;
+    IF _row_count = 0 THEN
+      INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
+      SELECT
+        npd.person_id,
+        NEW.id,
+        TRUE,
+        1.0 * (length(NEW.full_name) - levenshtein (npd.full_name, NEW.full_name)) / length(NEW.full_name),
+        CURRENT_DATE,
+	jsonb_build_object('rfc_match', npd.rfc = NEW.rfc, 'curp_match', npd.curp = NEW.curp,
+	  'name_match', TRUE, 'levenshtein_distance', levenshtein (npd.full_name, NEW.full_name))
+      FROM
+        natural_person_details npd
+      WHERE
+        levenshtein (npd.full_name, NEW.full_name) < min_distance;
+    END IF;
   END IF;
   RETURN NEW;
 END;

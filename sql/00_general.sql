@@ -37,4 +37,5 @@ $$
 LANGUAGE plpgsql;
 
 CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+
 CREATE EXTENSION IF NOT EXISTS pg_trgm;

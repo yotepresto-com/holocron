@@ -74,7 +74,8 @@ CREATE OR REPLACE FUNCTION insert_configs ()
   AS $$
 BEGIN
   INSERT INTO config (name, value)
-    VALUES ('max_string_distance_to_match', '3');
+    VALUES ('max_string_distance_to_match', '3'),
+    ('save_all_comparison_results', 'false');
 END;
 $$
 LANGUAGE plpgsql;

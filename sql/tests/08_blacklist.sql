@@ -36,7 +36,7 @@ BEGIN
       AND blacklist_person_id = _blacklist_person_id
       AND MATCH
       AND match_score = 1
-      AND (match_details->'name_match')::boolean IS TRUE) THEN
+      AND (match_details -> 'name_match')::BOOLEAN IS TRUE) THEN
   RAISE EXCEPTION 'Registro en blacklist_search no encontrado por nombre';
 END IF;
   -- mismo CURP y diferente nombre y RFC
@@ -53,7 +53,7 @@ END IF;
       person_id = _person_id
       AND blacklist_person_id = _blacklist_person_id
       AND MATCH
-      AND (match_details->'curp_match')::boolean IS TRUE) THEN
+      AND (match_details -> 'curp_match')::BOOLEAN IS TRUE) THEN
   RAISE EXCEPTION 'Registro en blacklist_search no encontrado por CURP';
 END IF;
   -- mismo RFC y diferente nombre y CURP
@@ -70,7 +70,7 @@ END IF;
       person_id = _person_id
       AND blacklist_person_id = _blacklist_person_id
       AND MATCH
-      AND (match_details->'rfc_match')::boolean IS TRUE) THEN
+      AND (match_details -> 'rfc_match')::BOOLEAN IS TRUE) THEN
   RAISE EXCEPTION 'Registro en blacklist_search no encontrado por RFC';
 END IF;
   -- diferente RFC y CURP con nombre parecido
@@ -88,8 +88,8 @@ END IF;
       AND blacklist_person_id = _blacklist_person_id
       AND MATCH
       AND match_score < 1
-      AND (match_details->'name_match')::BOOLEAN IS TRUE
-      AND (match_details->'levenshtein_distance')::INTEGER < 3) THEN
+      AND (match_details -> 'name_match')::BOOLEAN IS TRUE
+      AND (match_details -> 'levenshtein_distance')::INTEGER < 3) THEN
   RAISE EXCEPTION 'Registro en blacklist_search no encontrado por nombre parecido';
 END IF;
 END;
@@ -166,7 +166,7 @@ END IF;
       person_id = _person_id
       AND blacklist_person_id = _blacklist_person_id
       AND MATCH
-      AND (match_details->'rfc_match')::boolean IS TRUE) THEN
+      AND (match_details -> 'rfc_match')::BOOLEAN IS TRUE) THEN
   RAISE EXCEPTION 'Registro en blacklist_search no encontrado por RFC';
 END IF;
   -- diferente RFC y CURP con nombre parecido
@@ -184,8 +184,8 @@ END IF;
       AND blacklist_person_id = _blacklist_person_id
       AND MATCH
       AND match_score < 1
-      AND (match_details->'name_match')::BOOLEAN IS TRUE
-      AND (match_details->'levenshtein_distance')::INTEGER < 3) THEN
+      AND (match_details -> 'name_match')::BOOLEAN IS TRUE
+      AND (match_details -> 'levenshtein_distance')::INTEGER < 3) THEN
   RAISE EXCEPTION 'Registro en blacklist_search no encontrado por nombre parecido';
 END IF;
 END;
