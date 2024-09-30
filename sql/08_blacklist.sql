@@ -164,12 +164,12 @@ CREATE TRIGGER blacklist_natural_person_details_tgr
 
 -- Juridical Person Blacklist
 CREATE TABLE IF NOT EXISTS blacklist_juridical_person_details (
-  blacklist_person_id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
+  id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
   rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
   legal_name TEXT NOT NULL,
   incorporation_date DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  PRIMARY KEY (blacklist_person_id)
+  PRIMARY KEY (id)
 );
 
 DROP TRIGGER IF EXISTS prevent_blacklist_juridical_person_updates ON blacklist_juridical_person_details;
