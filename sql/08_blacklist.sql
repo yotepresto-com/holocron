@@ -54,16 +54,17 @@ CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
   id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
   curp VARCHAR(18) CHECK (LENGTH(curp) = 18),
   rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
-  name TEXT NOT NULL,
-  first_last_name TEXT NOT NULL,
+  name TEXT,
+  first_last_name TEXT,
   second_last_name TEXT,
+  full_name TEXT,
   date_of_birth DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT check_fullname_either_or
     CHECK (
-      (full_name IS NOT NULL AND name IS NULL AND last_name IS NULL)
+      (full_name IS NOT NULL AND name IS NULL AND first_last_name IS NULL and second_last_name IS NULL)
       OR
-      (full_name IS NULL AND name IS NOT NULL AND last_name IS NOT NULL)
+      (full_name IS NULL AND name IS NOT NULL AND first_last_name IS NOT NULL)
     ),
   PRIMARY KEY (id)
 );
