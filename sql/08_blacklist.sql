@@ -54,9 +54,9 @@ CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
   id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
   curp VARCHAR(18) CHECK (LENGTH(curp) = 18),
   rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
-  name TEXT,
-  last_name TEXT,
-  full_name TEXT,
+  name TEXT NOT NULL,
+  first_last_name TEXT NOT NULL,
+  second_last_name TEXT,
   date_of_birth DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT check_fullname_either_or
@@ -67,7 +67,6 @@ CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
     ),
   PRIMARY KEY (id)
 );
-
 
 CREATE INDEX IF NOT EXISTS idx_curp_blacklist_natural_details ON blacklist_natural_person_details USING HASH (curp);
 CREATE INDEX IF NOT EXISTS idx_rfc_blacklist_natural_details ON blacklist_natural_person_details USING HASH (rfc);
@@ -82,74 +81,11 @@ CREATE TRIGGER prevent_blacklist_natural_person_updates
   FOR EACH ROW
   EXECUTE FUNCTION prevent_updates ();
 
-
-CREATE OR REPLACE FUNCTION blacklist_natural_person_match_fn(
-    _person_name            TEXT,
-    _person_first_last_name TEXT,
-    _person_second_last_name TEXT,
-    _blacklist_name         TEXT,
-    _blacklist_last_name    TEXT,
-    _blacklist_full_name    TEXT
-)
-RETURNS DOUBLE PRECISION
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    -- Combined name for the 'person' side
-    person_full_name    TEXT;
-    -- Combined name for the 'blacklist' side
-    blacklist_full_name TEXT;
-    distance            INTEGER;
-    max_len             INTEGER;
-BEGIN
-    /*
-      1) Combine person's parts:
-         - If _person_name is not null, use it.
-         - Then add first last name (if present).
-         - Then add second last name (if present).
-         - This effectively is "first_name + ' ' + first_last_name + ' ' + second_last_name"
-         - We trim extra spaces at the end just in case.
-    */
-    person_full_name := COALESCE(_person_name, '')
-                       || CASE WHEN _person_first_last_name IS NOT NULL THEN ' ' || _person_first_last_name ELSE '' END
-                       || CASE WHEN _person_second_last_name IS NOT NULL THEN ' ' || _person_second_last_name ELSE '' END;
-
-    person_full_name := btrim(person_full_name);
-
-    /*
-      2) Combine blacklist parts:
-         - Use _blacklist_full_name if present,
-           otherwise "blacklist_name + ' ' + blacklist_last_name"
-         - Also trim extraneous spaces.
-    */
-    blacklist_full_name := COALESCE(
-        btrim(_blacklist_full_name),
-        btrim(_blacklist_name || ' ' || COALESCE(_blacklist_last_name, ''))
-    );
-
-    -- 3) Check if they match exactly:
-    IF person_full_name = blacklist_full_name THEN
-        RETURN 1.0;
-    END IF;
-
-    -- 4) If not exact, compute Levenshtein-based similarity:
-    distance := levenshtein(person_full_name, blacklist_full_name);
-    max_len  := GREATEST(length(person_full_name), length(blacklist_full_name));
-
-    -- Avoid division by zero; if both strings are empty, similarity is 0.
-    IF max_len = 0 THEN
-        RETURN 0.0;
-    END IF;
-
-    RETURN (1.0 * (max_len - distance)) / max_len;
-END;
-$$;
-
-
 CREATE OR REPLACE FUNCTION blacklist_natural_person_details_tgr_fn ()
   RETURNS TRIGGER
   AS $$
 DECLARE
+  _row_count INTEGER;
   min_distance INTEGER;
 BEGIN
   min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
@@ -175,7 +111,6 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
-
 
 DROP TRIGGER IF EXISTS blacklist_natural_person_details_tgr ON blacklist_natural_person_details;
 
