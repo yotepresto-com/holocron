@@ -3,6 +3,7 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.authentication import TokenAuthentication
 
 
@@ -10,7 +11,7 @@ from .models import Config, User
 from .serializers import ConfigSerializer
 
 
-class DbAuthenticatedViewSet(viewsets.ViewSet):
+class DbAuthenticatedViewSet(viewsets.ModelViewSet):
     authentication_classes = [TokenAuthentication, ]
     permission_classes = [IsAuthenticated]
 
@@ -24,11 +25,6 @@ class DbAuthenticatedViewSet(viewsets.ViewSet):
 class ConfigViewSet(DbAuthenticatedViewSet):
     queryset = Config.objects.all()
     serializer_class = ConfigSerializer
-
-    def list(self, request):
-        queryset = Config.objects.all()
-        serializer = ConfigSerializer(queryset, many=True)
-        return Response(serializer.data)
 
     def retrieve(self, request, name=None):
         queryset = Config.objects.all()
