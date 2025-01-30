@@ -175,8 +175,8 @@ class Product(models.Model):
     description = models.TextField(blank=True, null=True)
     person = models.ForeignKey(Person, models.DO_NOTHING, blank=True, null=True)
     product_type = models.ForeignKey('ProductType', models.DO_NOTHING)
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         managed = False
