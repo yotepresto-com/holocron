@@ -122,8 +122,8 @@ class BlacklistSearch(models.Model):
 class Config(models.Model):
     name = models.CharField(unique=True, max_length=100)
     value = models.TextField()
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         managed = False

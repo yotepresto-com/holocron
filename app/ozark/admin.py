@@ -9,6 +9,7 @@ from .models import AuditLog, Blacklist, BlacklistAlert, BlacklistJuridicalPerso
 
 class GenericAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
+        # TODO: use the django user model
         user = User.objects.get(username=request.user.username)
         with connection.cursor() as cursor:
             cursor.execute("select set_current_user_id(%s)", [user.id,])
@@ -43,8 +44,13 @@ class BlacklistSearchAdmin(GenericAdmin):
     list_display = ('id', 'person', 'blacklist_person', 'match', 'match_score', 'search_date', 'created_at', 'match_details')
 
 
+class ConfigAdmin(GenericAdmin):
+    list_display = ('id', 'name', 'value', 'created_at', 'updated_at')
+
+
 admin.site.register(AuditLog, AuditLogAdmin)
 admin.site.register(Blacklist, BlacklistAdmin)
 admin.site.register(BlacklistAlert, BlacklistAlertAdmin)
 admin.site.register(User, UserAdmin)
 admin.site.register(BlacklistSearch, BlacklistSearchAdmin)
+admin.site.register(Config, ConfigAdmin)
