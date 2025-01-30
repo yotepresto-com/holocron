@@ -1,7 +1,11 @@
-fastapi
 pydantic[email]
 pydantic_settings
-sqlalchemy
 dotenvx
-asyncpg
 uvicorn
+Django
+django-filter
+djangorestframework
+Markdown
+psycopg
+psycopg-binary
+
