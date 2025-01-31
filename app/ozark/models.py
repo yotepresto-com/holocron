@@ -60,7 +60,7 @@ class BlacklistNaturalPersonDetails(models.Model):
     second_last_name = models.TextField(blank=True, null=True)
     full_name = models.TextField(blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
-    created_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = False
@@ -131,11 +131,11 @@ class Config(models.Model):
 
 
 class JuridicalPersonDetails(models.Model):
-    person = models.OneToOneField('Person', models.DO_NOTHING, primary_key=True)
+    person = models.OneToOneField('Person', models.DO_NOTHING, primary_key=True, related_name='juridical_person_details')
     rfc = models.CharField(max_length=13, blank=True, null=True)
     legal_name = models.TextField()
     incorporation_date = models.DateField(blank=True, null=True)
-    created_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = False
@@ -143,15 +143,15 @@ class JuridicalPersonDetails(models.Model):
 
 
 class NaturalPersonDetails(models.Model):
-    person = models.OneToOneField('Person', models.DO_NOTHING, primary_key=True)
+    person = models.OneToOneField('Person', models.DO_NOTHING, primary_key=True, related_name='natural_person_details')
     curp = models.CharField(max_length=18, blank=True, null=True)
     rfc = models.CharField(max_length=13, blank=True, null=True)
     name = models.TextField()
     first_last_name = models.TextField()
     second_last_name = models.TextField(blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
-    created_at = models.DateTimeField()
-    full_name = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    full_name = models.GeneratedField(expression=None, output_field=models.TextField(), db_persist=True)
 
     class Meta:
         managed = False
@@ -161,8 +161,8 @@ class NaturalPersonDetails(models.Model):
 class Person(models.Model):
     type = models.TextField()  # This field type is a guess.
     active = models.BooleanField(blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
