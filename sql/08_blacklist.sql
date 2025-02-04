@@ -51,7 +51,8 @@ CREATE INDEX IF NOT EXISTS idx_person_attribute_values ON blacklist_person_attri
 
 -- Natural Person Blacklist
 CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
-  id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
+  id SERIAL PRIMARY KEY,
+  blacklist_person_id INTEGER NOT NULL UNIQUE REFERENCES blacklist_person (id) ON DELETE CASCADE,
   curp VARCHAR(18) CHECK (LENGTH(curp) = 18),
   rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
   name TEXT,
@@ -65,8 +66,7 @@ CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
       (full_name IS NOT NULL AND name IS NULL AND first_last_name IS NULL and second_last_name IS NULL)
       OR
       (full_name IS NULL AND name IS NOT NULL AND first_last_name IS NOT NULL)
-    ),
-  PRIMARY KEY (id)
+    )
 );
 
 CREATE INDEX IF NOT EXISTS idx_curp_blacklist_natural_details ON blacklist_natural_person_details USING HASH (curp);
@@ -186,12 +186,12 @@ CREATE TRIGGER blacklist_natural_person_details_tgr
 
 -- Juridical Person Blacklist
 CREATE TABLE IF NOT EXISTS blacklist_juridical_person_details (
-  blacklist_person_id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
+  id SERIAL PRIMARY KEY,
+  blacklist_person_id INTEGER NOT NULL UNIQUE REFERENCES blacklist_person (id) ON DELETE CASCADE,
   rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
   legal_name TEXT NOT NULL,
   incorporation_date DATE,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  PRIMARY KEY (blacklist_person_id)
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 DROP TRIGGER IF EXISTS prevent_blacklist_juridical_person_updates ON blacklist_juridical_person_details;
