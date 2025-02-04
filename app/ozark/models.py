@@ -40,7 +40,7 @@ class BlacklistAlert(models.Model):
 
 
 class BlacklistJuridicalPersonDetails(models.Model):
-    blacklist_person = models.OneToOneField('BlacklistPerson', models.DO_NOTHING, primary_key=True)
+    blacklist_person = models.OneToOneField('BlacklistPerson', models.DO_NOTHING, primary_key=True, related_name='juridical_person_details')
     rfc = models.CharField(max_length=13, blank=True, null=True)
     legal_name = models.TextField()
     incorporation_date = models.DateField(blank=True, null=True)
@@ -52,7 +52,7 @@ class BlacklistJuridicalPersonDetails(models.Model):
 
 
 class BlacklistNaturalPersonDetails(models.Model):
-    id = models.OneToOneField('BlacklistPerson', models.DO_NOTHING, db_column='id', primary_key=True)
+    blacklist_person = models.OneToOneField('BlacklistPerson', models.DO_NOTHING, related_name='natural_person_details')
     curp = models.CharField(max_length=18, blank=True, null=True)
     rfc = models.CharField(max_length=13, blank=True, null=True)
     name = models.TextField(blank=True, null=True)
