@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
 from .models import Config, Product, Person, NaturalPersonDetails, JuridicalPersonDetails, BlacklistPerson, \
-    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails
+    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, BlacklistPersonAttribute, \
+    BlacklistPersonAttributeValue
 
 
 class ConfigSerializer(serializers.ModelSerializer):
@@ -63,6 +64,11 @@ class PersonSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class PersonAttributeSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    value = serializers.CharField()
+
+
 class BlacklistNaturalPersonDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlacklistNaturalPersonDetails
@@ -78,6 +84,7 @@ class BlacklistJuridicalPersonDetailsSerializer(serializers.ModelSerializer):
 class BlacklistPersonSerializer(serializers.ModelSerializer):
     natural_person_details = BlacklistNaturalPersonDetailsSerializer(required=False)
     juridical_person_details = BlacklistJuridicalPersonDetailsSerializer(required=False)
+    attributes = PersonAttributeSerializer(many=True, required=False)
 
     def validate(self, data):
         if data.get('type') == 'juridical' and 'juridical_person_details' not in data:
@@ -96,12 +103,17 @@ class BlacklistPersonSerializer(serializers.ModelSerializer):
         elif 'juridical_person_details' in validated_data:
             juridical_person_details_data = validated_data.pop('juridical_person_details')
 
+        attributes = validated_data.pop('attributes', [])
         person = BlacklistPerson.objects.create(**validated_data)
 
         if natural_person_details_data:
             BlacklistNaturalPersonDetails.objects.create(blacklist_person=person, **natural_person_details_data)
         elif juridical_person_details_data:
             BlacklistJuridicalPersonDetails.objects.create(blacklist_person=person, **juridical_person_details_data)
+
+        for attribute in attributes:
+            pa, _ = BlacklistPersonAttribute.objects.get_or_create(attribute_name=attribute['name'])
+            BlacklistPersonAttributeValue.objects.create(blacklist_person=person, attribute=pa, value=attribute['value'])
 
         return person
 
