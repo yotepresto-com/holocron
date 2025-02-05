@@ -19,7 +19,7 @@ $$;
 -- Tabla para almacenar las matrices de riesgo
 CREATE TABLE IF NOT EXISTS risk_matrix (
   id SERIAL PRIMARY KEY,
-  profile_type_id INTEGER NOT NULL REFERENCES profile_type (id) ON DELETE CASCADE,
+  profile_type_id INTEGER NOT NULL REFERENCES profile (id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   status risk_matrix_status NOT NULL DEFAULT 'development',
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

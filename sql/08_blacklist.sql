@@ -1,13 +1,15 @@
 -- Blacklists
 CREATE TABLE IF NOT EXISTS blacklist (
   id SERIAL PRIMARY KEY,
-  short_name VARCHAR(10) UNIQUE NOT NULL,
+  name VARCHAR(10) UNIQUE NOT NULL,
   description TEXT,
+  attributes_schema jsonb NOT NULL DEFAULT '{}',
+  import_configuration jsonb NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
--- Perstons in blacklist
+-- Blacklisted Persons
 CREATE TABLE IF NOT EXISTS blacklist_person (
   id SERIAL PRIMARY KEY,
   blacklist_id INTEGER NOT NULL REFERENCES blacklist (id),
@@ -17,6 +19,7 @@ CREATE TABLE IF NOT EXISTS blacklist_person (
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   deleted_at TIMESTAMPTZ,
   official_deletion_number TEXT,
+  attributes jsonb NOT NULL DEFAULT '{}',
   CONSTRAINT check_deletion_consistency CHECK ((deleted_at IS NULL AND official_deletion_number IS NULL) OR
     (deleted_at IS NOT NULL AND official_deletion_number IS NOT NULL))
 );
@@ -27,27 +30,6 @@ CREATE TRIGGER prevent_blacklist_person_deletion
   BEFORE DELETE ON blacklist_person
   FOR EACH ROW
   EXECUTE PROCEDURE prevent_deletion ();
-
-CREATE TABLE IF NOT EXISTS blacklist_person_attribute (
-  id SERIAL PRIMARY KEY,
-  attribute_name VARCHAR(50) NOT NULL UNIQUE,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS blacklist_person_attribute_value (
-  id SERIAL PRIMARY KEY,
-  blacklist_person_id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
-  attribute_id INTEGER NOT NULL REFERENCES blacklist_person_attribute (id) ON DELETE CASCADE,
-  value TEXT,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  UNIQUE (blacklist_person_id, attribute_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_person_attribute_values ON blacklist_person_attribute_value
-  (blacklist_person_id, attribute_id);
 
 -- Natural Person Blacklist
 CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
@@ -74,7 +56,17 @@ CREATE INDEX IF NOT EXISTS idx_rfc_blacklist_natural_details ON blacklist_natura
 CREATE INDEX IF NOT EXISTS idx_full_name_blacklist_natural_details ON blacklist_natural_person_details USING HASH (full_name);
 CREATE INDEX IF NOT EXISTS idx_full_name_trgm_blacklist_natural_details ON blacklist_natural_person_details USING GIN (full_name gin_trgm_ops);
 
+-- Juridical Person Blacklist
+CREATE TABLE IF NOT EXISTS blacklist_juridical_person_details (
+  blacklist_person_id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
+  rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
+  legal_name TEXT NOT NULL,
+  incorporation_date DATE,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  PRIMARY KEY (blacklist_person_id)
+);
 
+-- Natural Person TRIGGERS
 DROP TRIGGER IF EXISTS prevent_blacklist_natural_person_updates ON blacklist_natural_person_details;
 
 CREATE TRIGGER prevent_blacklist_natural_person_updates
@@ -184,16 +176,8 @@ CREATE TRIGGER blacklist_natural_person_details_tgr
   FOR EACH ROW
   EXECUTE FUNCTION blacklist_natural_person_details_tgr_fn ();
 
--- Juridical Person Blacklist
-CREATE TABLE IF NOT EXISTS blacklist_juridical_person_details (
-  id SERIAL PRIMARY KEY,
-  blacklist_person_id INTEGER NOT NULL UNIQUE REFERENCES blacklist_person (id) ON DELETE CASCADE,
-  rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
-  legal_name TEXT NOT NULL,
-  incorporation_date DATE,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
 
+-- Juridical person TRIGGERS
 DROP TRIGGER IF EXISTS prevent_blacklist_juridical_person_updates ON blacklist_juridical_person_details;
 
 CREATE TRIGGER prevent_blacklist_juridical_person_updates
@@ -201,7 +185,7 @@ CREATE TRIGGER prevent_blacklist_juridical_person_updates
   FOR EACH ROW
   EXECUTE FUNCTION prevent_updates ();
 
--- Add Audit Triggers
+-- Add Audit TRIGGERS
 SELECT
-  add_audit_triggers (ARRAY['blacklist', 'blacklist_person', 'blacklist_person_attribute', 'blacklist_person_attribute_value',
-    'blacklist_natural_person_details', 'blacklist_juridical_person_details']);
+  add_audit_triggers (ARRAY['blacklist', 'blacklist_person', 'blacklist_natural_person_details',
+      'blacklist_juridical_person_details']);
