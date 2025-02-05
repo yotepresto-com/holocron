@@ -1,7 +1,6 @@
 from rest_framework import serializers
-
-from .models import Config, Product, Person, NaturalPersonDetails, JuridicalPersonDetails, BlacklistPerson, \
-    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails
+from .models import Config, Product, Person, Profile, NaturalPersonDetails, JuridicalPersonDetails, BlacklistPerson, \
+    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, ProfileAttribute
 
 
 class ConfigSerializer(serializers.ModelSerializer):
@@ -108,3 +107,32 @@ class BlacklistPersonSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlacklistPerson
         fields = '__all__'
+
+
+class ProfileAttributeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfileAttribute
+        fields = [
+            'id',
+            'name',
+            'description',
+            'type',
+            'accepted_values',
+            'is_transactional',
+        ]
+        read_only_fields = ['id']
+
+class ProfileSerializer(serializers.ModelSerializer):
+    # Read-only nested attributes (will be returned in detail views)
+    attributes = ProfileAttributeSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Profile
+        fields = [
+            'id',
+            'name',
+            'accept_natural_person',
+            'accept_legal_person',
+            'attributes',
+        ]
+        read_only_fields = ['id', 'attributes']

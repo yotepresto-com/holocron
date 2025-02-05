@@ -40,7 +40,7 @@ CREATE OR REPLACE FUNCTION create_test_blacklist ()
 DECLARE
   _blacklist blacklist;
 BEGIN
-  INSERT INTO blacklist (short_name)
+  INSERT INTO blacklist (name)
     VALUES ('test')
   RETURNING
     * INTO _blacklist;
