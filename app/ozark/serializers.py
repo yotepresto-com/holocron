@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from .models import Config, Product, Person, NaturalPersonDetails, JuridicalPersonDetails, BlacklistPerson, \
     BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, BlacklistPersonAttribute, \
-    BlacklistPersonAttributeValue, ProfileAttribute
+    BlacklistPersonAttributeValue, ProfileAttribute, Profile
 
 
 class ConfigSerializer(serializers.ModelSerializer):

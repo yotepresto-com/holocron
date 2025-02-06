@@ -52,7 +52,6 @@ class ConfigViewSet(DbAuthenticatedViewSet):
             return Response(serializer.data)
 
 
-<<<<<<< Updated upstream
 class ProductViewSet(DbAuthenticatedViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
