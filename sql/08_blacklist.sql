@@ -150,14 +150,14 @@ BEGIN
     INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
     SELECT
       npd.person_id,
-      NEW.id,
+      NEW.blacklist_person_id,
       TRUE,
       blacklist_natural_person_match_fn(
               npd.name,
               npd.first_last_name,
               npd.second_last_name,
               NEW.name,
-              NEW.last_name,
+              NEW.first_last_name || coalesce(' ' || NEW.second_last_name, ''),
               NEW.full_name),
       CURRENT_DATE
     FROM
