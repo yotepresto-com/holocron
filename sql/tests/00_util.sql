@@ -62,7 +62,7 @@ BEGIN
     VALUES (_blacklist_id, 'natural', '1234567890')
   RETURNING
     * INTO blp;
-  INSERT INTO blacklist_natural_person_details (id, curp, rfc, name, first_last_name, second_last_name, date_of_birth)
+  INSERT INTO blacklist_natural_person_details (blacklist_person_id, curp, rfc, name, first_last_name, second_last_name, date_of_birth)
     VALUES (blp.id, _curp, _rfc, _name, _first_last_name, _second_last_name, _date_of_birth);
   RETURN blp;
 END;
