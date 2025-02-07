@@ -70,7 +70,7 @@ BEGIN
     INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
     SELECT
       NEW.person_id,
-      bl_npd.id,
+      bl_npd.blacklist_person_id,
       TRUE,
       1,
       CURRENT_DATE,
@@ -83,16 +83,16 @@ BEGIN
     INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
     SELECT
       NEW.person_id,
-      bl_npd.id,
+      bl_npd.blacklist_person_id,
       TRUE,
       1,
       CURRENT_DATE,
       json_build_object('rfc_match', bl_npd.rfc = NEW.rfc, 'curp_match', bl_npd.curp = NEW.curp,
-	'name_match', bl_npd.full_name = NEW.full_name)
+	'name_match', bl_npd.calculated_full_name = NEW.full_name)
     FROM
       blacklist_natural_person_details bl_npd
     WHERE
-      bl_npd.full_name = NEW.full_name
+      bl_npd.calculated_full_name = NEW.full_name
       OR bl_npd.curp = NEW.curp
       OR bl_npd.rfc = NEW.rfc;
     GET DIAGNOSTICS _row_count := ROW_COUNT;
@@ -100,16 +100,16 @@ BEGIN
       INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
       SELECT
         NEW.person_id,
-        bl_npd.id,
+        bl_npd.blacklist_person_id,
         TRUE,
-        1.0 * (length(NEW.full_name) - levenshtein (bl_npd.full_name, NEW.full_name)) / length(NEW.full_name),
+        1.0 * (length(NEW.full_name) - levenshtein (bl_npd.calculated_full_name, NEW.full_name)) / length(NEW.full_name),
         CURRENT_DATE,
 	json_build_object('rfc_match', bl_npd.rfc = NEW.rfc, 'curp_match', bl_npd.curp = NEW.curp,
-	  'name_match', TRUE, 'levenshtein_distance', levenshtein (bl_npd.full_name, NEW.full_name))
+	  'name_match', TRUE, 'levenshtein_distance', levenshtein (bl_npd.calculated_full_name, NEW.full_name))
       FROM
         blacklist_natural_person_details bl_npd
       WHERE
-        levenshtein (bl_npd.full_name, NEW.full_name) < min_distance;
+        levenshtein (bl_npd.calculated_full_name, NEW.full_name) < min_distance;
     END IF;
   END IF;
   RETURN NEW;
