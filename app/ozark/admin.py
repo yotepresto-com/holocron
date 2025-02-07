@@ -32,7 +32,7 @@ class BlacklistPersonAdmin(admin.TabularInline):
 
 
 class BlacklistAdmin(GenericAdmin):
-    list_display = ('id', 'short_name', 'description', 'created_at', 'updated_at')
+    list_display = ('id', 'name', 'description', 'created_at', 'updated_at')
     inlines = [BlacklistPersonAdmin,]
 
 

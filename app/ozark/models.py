@@ -17,10 +17,12 @@ class AuditLog(models.Model):
 
 
 class Blacklist(models.Model):
-    short_name = models.CharField(unique=True, max_length=10)
+    name = models.CharField(unique=True, max_length=10)
     description = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    attributes_schema = models.JSONField()
+    import_configuration = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         managed = False
