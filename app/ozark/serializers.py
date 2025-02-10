@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 
 from .models import Config, Product, Person, NaturalPersonDetails, JuridicalPersonDetails, BlacklistPerson, \
-    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, ProfileAttribute, Profile
+    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, ProfileAttribute, Profile, Blacklist
 
 
 class ConfigSerializer(serializers.ModelSerializer):
@@ -64,9 +64,10 @@ class PersonSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class PersonAttributeSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    value = serializers.CharField()
+class BlacklistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Blacklist
+        fields = '__all__'
 
 
 class BlacklistNaturalPersonDetailsSerializer(serializers.ModelSerializer):
@@ -84,7 +85,6 @@ class BlacklistJuridicalPersonDetailsSerializer(serializers.ModelSerializer):
 class BlacklistPersonSerializer(serializers.ModelSerializer):
     natural_person_details = BlacklistNaturalPersonDetailsSerializer(required=False)
     juridical_person_details = BlacklistJuridicalPersonDetailsSerializer(required=False)
-    attributes = PersonAttributeSerializer(many=True, required=False)
 
     def validate(self, data):
         if data.get('type') == 'juridical' and 'juridical_person_details' not in data:

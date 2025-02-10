@@ -8,9 +8,9 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.authentication import TokenAuthentication
 
 
-from .models import Config, User, Product, Person, Profile, ProfileAttribute, BlacklistPerson
+from .models import Config, User, Product, Person, Profile, ProfileAttribute, BlacklistPerson, Blacklist
 from .serializers import ConfigSerializer, ProductSerializer, PersonSerializer, BlacklistPersonSerializer, \
-    ProfileSerializer, ProfileAttributeSerializer
+    ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer
 
 
 class DbAuthenticatedViewSet(viewsets.ModelViewSet):
@@ -83,6 +83,19 @@ class PersonViewSet(DbAuthenticatedViewSet):
             person = get_object_or_404(Person, pk=pk)
             person.delete()
             return Response(status=200)
+
+
+class BlacklistViewSet(DbAuthenticatedViewSet):
+    queryset = Blacklist.objects.all()
+    serializer_class = BlacklistSerializer
+
+    def create(self, request):
+        with transaction.atomic():
+            self.authenticate(request)
+            serializer = BlacklistSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
 
 
 class BlacklistPersonViewSet(DbAuthenticatedViewSet):

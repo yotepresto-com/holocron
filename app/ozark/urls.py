@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import ConfigViewSet, ProfileViewSet, ProductViewSet, PersonViewSet, BlacklistPersonViewSet
+from .views import ConfigViewSet, ProfileViewSet, ProductViewSet, PersonViewSet, BlacklistPersonViewSet, BlacklistViewSet
 
 urlpatterns = [
     path('config/', ConfigViewSet.as_view({'get': 'list', 'post': 'create'})),
@@ -13,6 +13,9 @@ urlpatterns = [
     # Persons
     path('persons/', PersonViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('persons/<int:pk>/', PersonViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'})),
+
+    path('blacklist/', BlacklistViewSet.as_view({'get': 'list', 'post': 'create'})),
+    path('blacklist/<int:pk>/', BlacklistViewSet.as_view({'get': 'retrieve'})),
 
     # Blacklisted Persons
     path('blacklisted_persons/', BlacklistPersonViewSet.as_view({'get': 'list', 'post': 'create'})),
