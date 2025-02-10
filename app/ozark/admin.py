@@ -3,7 +3,7 @@ from django.db import connection
 
 
 from .models import AuditLog, Blacklist, BlacklistAlert, BlacklistJuridicalPersonDetails, BlacklistNaturalPersonDetails, \
-    BlacklistPerson, BlacklistPersonAttribute, BlacklistPersonAttributeValue, BlacklistSearch, Config, \
+    BlacklistPerson, BlacklistSearch, Config, \
     JuridicalPersonDetails, User
 
 

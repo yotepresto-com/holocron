@@ -2,8 +2,7 @@ from rest_framework import serializers
 
 
 from .models import Config, Product, Person, NaturalPersonDetails, JuridicalPersonDetails, BlacklistPerson, \
-    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, BlacklistPersonAttribute, \
-    BlacklistPersonAttributeValue, ProfileAttribute, Profile
+    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, ProfileAttribute, Profile
 
 
 class ConfigSerializer(serializers.ModelSerializer):
@@ -104,17 +103,12 @@ class BlacklistPersonSerializer(serializers.ModelSerializer):
         elif 'juridical_person_details' in validated_data:
             juridical_person_details_data = validated_data.pop('juridical_person_details')
 
-        attributes = validated_data.pop('attributes', [])
         person = BlacklistPerson.objects.create(**validated_data)
 
         if natural_person_details_data:
             BlacklistNaturalPersonDetails.objects.create(blacklist_person=person, **natural_person_details_data)
         elif juridical_person_details_data:
             BlacklistJuridicalPersonDetails.objects.create(blacklist_person=person, **juridical_person_details_data)
-
-        for attribute in attributes:
-            pa, _ = BlacklistPersonAttribute.objects.get_or_create(attribute_name=attribute['name'])
-            BlacklistPersonAttributeValue.objects.create(blacklist_person=person, attribute=pa, value=attribute['value'])
 
         return person
 

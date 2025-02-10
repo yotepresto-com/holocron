@@ -77,38 +77,11 @@ class BlacklistPerson(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
     official_deletion_number = models.CharField(blank=True, null=True, max_length=100)
-
-    @property
-    def attributes(self):
-        return [{'name': pav.attribute.attribute_name, 'value': pav.value} for pav in BlacklistPersonAttributeValue.objects.filter(blacklist_person_id=self.id)]
+    attributes = models.JSONField()
 
     class Meta:
         managed = False
         db_table = 'blacklist_person'
-
-
-class BlacklistPersonAttribute(models.Model):
-    attribute_name = models.CharField(unique=True, max_length=50)
-    description = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        managed = False
-        db_table = 'blacklist_person_attribute'
-
-
-class BlacklistPersonAttributeValue(models.Model):
-    blacklist_person = models.ForeignKey(BlacklistPerson, models.DO_NOTHING)
-    attribute = models.ForeignKey(BlacklistPersonAttribute, models.DO_NOTHING)
-    value = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        managed = False
-        db_table = 'blacklist_person_attribute_value'
-        unique_together = (('blacklist_person', 'attribute'),)
 
 
 class BlacklistSearch(models.Model):
