@@ -107,6 +107,7 @@ BEGIN
                        || CASE WHEN _person_second_last_name IS NOT NULL THEN ' ' || _person_second_last_name ELSE '' END;
 
     person_full_name := btrim(person_full_name);
+    person_full_name := unaccent(person_full_name);
 
     /*
       2) Combine blacklist parts:
@@ -114,10 +115,11 @@ BEGIN
            otherwise "blacklist_name + ' ' + blacklist_last_name"
          - Also trim extraneous spaces.
     */
-blacklist_full_name := COALESCE(
+    blacklist_full_name := COALESCE(
         btrim(_blacklist_full_name),
         btrim(_blacklist_name || ' ' || COALESCE(_blacklist_last_name, ''))
     );
+    blacklist_full_name := unaccent(blacklist_full_name);
 
     -- 3) Check if they match exactly:
     IF person_full_name = blacklist_full_name THEN
