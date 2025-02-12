@@ -71,6 +71,8 @@ class BlacklistSerializer(serializers.ModelSerializer):
 
 
 class BlacklistNaturalPersonDetailsSerializer(serializers.ModelSerializer):
+    calculated_full_name = serializers.CharField(read_only=True)
+
     class Meta:
         model = BlacklistNaturalPersonDetails
         exclude = ['blacklist_person', ]

@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.db import connection, transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -86,7 +87,7 @@ class PersonViewSet(DbAuthenticatedViewSet):
 
 
 class BlacklistViewSet(DbAuthenticatedViewSet):
-    queryset = Blacklist.objects.all()
+    queryset = Blacklist.objects.all().order_by('id')
     serializer_class = BlacklistSerializer
 
     def create(self, request):
@@ -101,6 +102,47 @@ class BlacklistViewSet(DbAuthenticatedViewSet):
 class BlacklistPersonViewSet(DbAuthenticatedViewSet):
     queryset = BlacklistPerson.objects.all()
     serializer_class = BlacklistPersonSerializer
+
+    def get_queryset(self):
+        # TODO: fix the N+1 query issue
+        _type = self.request.query_params.get('type')
+        if _type:
+            self.queryset = self.queryset.filter(type=_type)
+
+        curp = self.request.query_params.get('curp')
+        if curp:
+            self.queryset = self.queryset.filter(natural_person_details__curp=curp)
+
+        rfc = self.request.query_params.get('rfc')
+        if rfc:
+            self.queryset = self.queryset.filter(Q(juridical_person_details__rfc=rfc) | Q(natural_person_details__rfc=rfc))
+
+        name = self.request.query_params.get('name')
+        if name:
+            self.queryset = self.queryset.filter(natural_person_details__name=name)
+
+        # TODO: use second last name too
+        last_name = self.request.query_params.get('last_name')
+        if last_name:
+            self.queryset = self.queryset.filter(natural_person_details__first_last_name=last_name)
+
+        full_name = self.request.query_params.get('full_name')
+        if full_name:
+            self.queryset = self.queryset.filter(natural_person_details__calculated_full_name__icontains=full_name)
+
+        date_of_birth = self.request.query_params.get('date_of_birth')
+        if date_of_birth:
+            self.queryset = self.queryset.filter(natural_person_details__date_of_birth=date_of_birth)
+
+        legal_name = self.request.query_params.get('legal_name')
+        if legal_name:
+            self.queryset = self.queryset.filter(juridical_person_details__legal_name=legal_name)
+
+        incorporation_date = self.request.query_params.get('incorporation_date')
+        if incorporation_date:
+            self.queryset = self.queryset.filter(juridical_person_details__incorporation_date=incorporation_date)
+
+        return self.queryset
 
     def create(self, request):
         with transaction.atomic():
