@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from django.contrib.auth.models import User as AuthUser
 
 from .models import Config, Product, Person, NaturalPersonDetails, JuridicalPersonDetails, BlacklistPerson, \
     BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, ProfileAttribute, Profile, Blacklist
@@ -116,6 +116,21 @@ class BlacklistPersonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BlacklistPerson
+        fields = '__all__'
+
+
+class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+
+    def get_fields(self, *args, **kwargs):
+        fields = super().get_fields(*args, **kwargs)
+        request = self.context.get('request')
+        if request and request.method == 'PUT':
+            fields['username'].required = False
+        return fields
+
+    class Meta:
+        model = AuthUser
         fields = '__all__'
 
 

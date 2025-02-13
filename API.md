@@ -29,8 +29,9 @@ The server should return:
   ```json
   {
     "username": "johndoe",
-    "email": "johndoe@example.com",
-    "name": "John Doe"
+    "email": "test@ytp.com",
+    "first_name": "Juan",
+    "last_name": "Perez"
   }
   ```
 - **Response:**

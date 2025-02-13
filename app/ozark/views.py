@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.contrib.auth.models import User as AuthUser
 from django.db import connection, transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -11,7 +12,7 @@ from rest_framework.authentication import TokenAuthentication
 
 from .models import Config, User, Product, Person, Profile, ProfileAttribute, BlacklistPerson, Blacklist
 from .serializers import ConfigSerializer, ProductSerializer, PersonSerializer, BlacklistPersonSerializer, \
-    ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer
+    ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer, UserSerializer
 
 
 class DbAuthenticatedViewSet(viewsets.ModelViewSet):
@@ -158,6 +159,19 @@ class BlacklistPersonViewSet(DbAuthenticatedViewSet):
             person = get_object_or_404(BlacklistPerson, pk=pk)
             person.delete()
             return Response(status=200)
+
+
+class UsersViewSet(DbAuthenticatedViewSet):
+    queryset = AuthUser.objects.all()
+    serializer_class = UserSerializer
+
+    def create(self, request):
+        with transaction.atomic():
+            self.authenticate(request)
+            serializer = UserSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
 
 
 class ProfileViewSet(DbAuthenticatedViewSet):
