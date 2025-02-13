@@ -10,9 +10,12 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.authentication import TokenAuthentication
 
 
-from .models import Config, User, Product, Person, Profile, ProfileAttribute, BlacklistPerson, Blacklist
+from .models import Config, User, Product, Person, Profile, ProfileAttribute, BlacklistPerson, Blacklist, \
+    RolePermission
 from .serializers import ConfigSerializer, ProductSerializer, PersonSerializer, BlacklistPersonSerializer, \
-    ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer, UserSerializer, GroupSerializer
+    ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer, UserSerializer, GroupSerializer, \
+    RolePermissionSerializer, MultipleRolePermissionsSerializer
+
 
 
 class DbAuthenticatedViewSet(viewsets.ModelViewSet):
@@ -200,6 +203,40 @@ class GroupViewSet(DbAuthenticatedViewSet):
            group = get_object_or_404(AuthGroup, pk=pk)
            group.delete()
            return Response(status=204)
+
+
+class RolePermissionViewSet(DbAuthenticatedViewSet):
+    queryset = RolePermission.objects.all()
+    serializer_class = RolePermissionSerializer
+
+    def get_role_permissions(self, request, pk):
+        role = get_object_or_404(AuthGroup, pk=pk)
+        permissions = role.role_permissions.all()
+        serializer = RolePermissionSerializer(permissions, many=True)
+        return Response(serializer.data)
+
+    def create_role_permissions(self, request, pk):
+        role = get_object_or_404(AuthGroup, pk=pk)
+        serializer = MultipleRolePermissionsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            self.authenticate(request)
+            for permission in serializer.validated_data['permissions']:
+                role.role_permissions.create(role=role, permission=permission)
+
+        return Response(serializer.data, 201)
+
+
+    def delete_role_permissions(self, request, pk):
+        role = get_object_or_404(AuthGroup, pk=pk)
+        serializer = MultipleRolePermissionsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            self.authenticate(request)
+            for permission in serializer.validated_data['permissions']:
+                role.role_permissions.get(role=role, permission=permission).delete()
+
+        return Response(serializer.data, 204)
 
 
 class ProfileViewSet(DbAuthenticatedViewSet):

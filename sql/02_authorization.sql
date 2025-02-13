@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS ROLE (
 -- Role Permission Assignment
 CREATE TABLE IF NOT EXISTS role_permission (
   id SERIAL PRIMARY KEY,
-  role_id INTEGER NOT NULL REFERENCES ROLE (id) ON DELETE CASCADE,
+  role_id INTEGER NOT NULL REFERENCES auth_group (id) ON DELETE CASCADE,
   permission permission_type NOT NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   UNIQUE (role_id, permission)

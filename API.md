@@ -81,8 +81,7 @@ The server should return:
 - **Request Body** (JSON):
   ```json
   {
-    "name": "Administrator",
-    "description": "Users with administrative privileges"
+    "name": "Administrator"
   }
   ```
 - **Response:**
@@ -107,7 +106,7 @@ The server should return:
 - **Request Body** (JSON):
   ```json
   {
-    "description": "Updated role description"
+    "name": "New name"
   }
   ```
 - **Response:**

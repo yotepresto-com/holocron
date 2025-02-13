@@ -1,7 +1,8 @@
 from django.urls import path
 
+from .models import RolePermission
 from .views import ConfigViewSet, ProfileViewSet, ProductViewSet, PersonViewSet, BlacklistPersonViewSet, BlacklistViewSet, \
-    UserViewSet, GroupViewSet
+    UserViewSet, GroupViewSet, RolePermissionViewSet
 
 urlpatterns = [
     path('config/', ConfigViewSet.as_view({'get': 'list', 'post': 'create'})),
@@ -29,6 +30,9 @@ urlpatterns = [
     # groups
     path('roles/', GroupViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('roles/<int:pk>/', GroupViewSet.as_view({'get': 'retrieve', 'delete': 'destroy', 'put': 'update'})),
+
+    # role permissions
+    path('roles/<int:pk>/permissions/', RolePermissionViewSet.as_view({'get': 'get_role_permissions', 'post': 'create_role_permissions', 'delete': 'delete_role_permissions'})),
 
     # Profile Management
     #path('profiles/', ProfileViewSet.create_profile, name='create_profile'),

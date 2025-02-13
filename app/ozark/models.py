@@ -1,6 +1,5 @@
 from django.db import models
-
-
+from django.contrib.auth.models import Group as AuthGroup
 
 
 class AuditLog(models.Model):
@@ -331,9 +330,9 @@ class Role(models.Model):
 
 
 class RolePermission(models.Model):
-    role = models.ForeignKey(Role, models.DO_NOTHING)
+    role = models.ForeignKey(AuthGroup, models.DO_NOTHING, related_name='role_permissions')
     permission = models.TextField()  # This field type is a guess.
-    created_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = False
@@ -393,12 +392,12 @@ class User(models.Model):
         db_table = 'user'
 
 
-class UserRole(models.Model):
-    user = models.ForeignKey(User, models.DO_NOTHING)
-    role = models.ForeignKey(Role, models.DO_NOTHING)
-    created_at = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'user_role'
-        unique_together = (('user', 'role'),)
+# class UserRole(models.Model):
+#     user = models.ForeignKey(User, models.DO_NOTHING)
+#     role = models.ForeignKey(Role, models.DO_NOTHING)
+#     created_at = models.DateTimeField()
+#
+#     class Meta:
+#         managed = False
+#         db_table = 'user_role'
+#         unique_together = (('user', 'role'),)

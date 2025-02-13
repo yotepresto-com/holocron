@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth.models import User as AuthUser, Group as AuthGroup
 
 from .models import Config, Product, Person, NaturalPersonDetails, JuridicalPersonDetails, BlacklistPerson, \
-    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, ProfileAttribute, Profile, Blacklist
+    BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, ProfileAttribute, Profile, Blacklist, \
+    RolePermission
 
 
 class ConfigSerializer(serializers.ModelSerializer):
@@ -138,6 +139,16 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuthGroup
         exclude = ['permissions', ]
+
+
+class RolePermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RolePermission
+        exclude = ['role', ]
+
+
+class MultipleRolePermissionsSerializer(serializers.Serializer):
+    permissions = serializers.ListSerializer(child=serializers.CharField())
 
 
 class ProfileAttributeSerializer(serializers.ModelSerializer):
