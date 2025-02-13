@@ -173,6 +173,13 @@ class UsersViewSet(DbAuthenticatedViewSet):
             serializer.save()
             return Response(serializer.data)
 
+    def destroy(self, request, pk=None):
+        with transaction.atomic():
+            self.authenticate(request)
+            user = get_object_or_404(AuthUser, pk=pk, is_active=True)
+            user.is_active = False
+            user.save()
+            return Response(status=200)
 
 class ProfileViewSet(DbAuthenticatedViewSet):
     """
