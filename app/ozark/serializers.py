@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User as AuthUser
+from django.contrib.auth.models import User as AuthUser, Group as AuthGroup
 
 from .models import Config, Product, Person, NaturalPersonDetails, JuridicalPersonDetails, BlacklistPerson, \
     BlacklistNaturalPersonDetails, BlacklistJuridicalPersonDetails, ProfileAttribute, Profile, Blacklist
@@ -132,6 +132,12 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuthUser
         fields = '__all__'
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuthGroup
+        exclude = ['permissions', ]
 
 
 class ProfileAttributeSerializer(serializers.ModelSerializer):

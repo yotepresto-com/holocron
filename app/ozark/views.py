@@ -1,5 +1,5 @@
 from django.db.models import Q
-from django.contrib.auth.models import User as AuthUser
+from django.contrib.auth.models import User as AuthUser, Group as AuthGroup
 from django.db import connection, transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -12,7 +12,7 @@ from rest_framework.authentication import TokenAuthentication
 
 from .models import Config, User, Product, Person, Profile, ProfileAttribute, BlacklistPerson, Blacklist
 from .serializers import ConfigSerializer, ProductSerializer, PersonSerializer, BlacklistPersonSerializer, \
-    ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer, UserSerializer
+    ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer, UserSerializer, GroupSerializer
 
 
 class DbAuthenticatedViewSet(viewsets.ModelViewSet):
@@ -42,7 +42,7 @@ class ConfigViewSet(DbAuthenticatedViewSet):
             serializer = ConfigSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, 201)
 
     def update(self, request, name=None):
         with transaction.atomic():
@@ -65,7 +65,7 @@ class ProductViewSet(DbAuthenticatedViewSet):
             serializer = ProductSerializer(product, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, 201)
 
     def delete(self, request, pk=None):
         with transaction.atomic():
@@ -84,7 +84,7 @@ class PersonViewSet(DbAuthenticatedViewSet):
             self.authenticate(request)
             person = get_object_or_404(Person, pk=pk)
             person.delete()
-            return Response(status=200)
+            return Response(status=204)
 
 
 class BlacklistViewSet(DbAuthenticatedViewSet):
@@ -97,7 +97,7 @@ class BlacklistViewSet(DbAuthenticatedViewSet):
             serializer = BlacklistSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, 201)
 
 
 class BlacklistPersonViewSet(DbAuthenticatedViewSet):
@@ -151,17 +151,17 @@ class BlacklistPersonViewSet(DbAuthenticatedViewSet):
             serializer = BlacklistPersonSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, 201)
 
     def delete(self, request, pk=None):
         with transaction.atomic():
             self.authenticate(request)
             person = get_object_or_404(BlacklistPerson, pk=pk)
             person.delete()
-            return Response(status=200)
+            return Response(status=204)
 
 
-class UsersViewSet(DbAuthenticatedViewSet):
+class UserViewSet(DbAuthenticatedViewSet):
     queryset = AuthUser.objects.all()
     serializer_class = UserSerializer
 
@@ -171,7 +171,7 @@ class UsersViewSet(DbAuthenticatedViewSet):
             serializer = UserSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, 201)
 
     def destroy(self, request, pk=None):
         with transaction.atomic():
@@ -179,7 +179,28 @@ class UsersViewSet(DbAuthenticatedViewSet):
             user = get_object_or_404(AuthUser, pk=pk, is_active=True)
             user.is_active = False
             user.save()
-            return Response(status=200)
+            return Response(status=204)
+
+
+class GroupViewSet(DbAuthenticatedViewSet):
+    queryset = AuthGroup.objects.all()
+    serializer_class = GroupSerializer
+
+    def create(self, request):
+        with transaction.atomic():
+            self.authenticate(request)
+            serializer = GroupSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, 201)
+
+    def destroy(self, request, pk=None):
+       with transaction.atomic():
+           self.authenticate(request)
+           group = get_object_or_404(AuthGroup, pk=pk)
+           group.delete()
+           return Response(status=204)
+
 
 class ProfileViewSet(DbAuthenticatedViewSet):
     """
