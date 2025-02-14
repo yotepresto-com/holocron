@@ -318,15 +318,15 @@ class RiskMatrix(models.Model):
         db_table = 'risk_matrix'
 
 
-class Role(models.Model):
-    name = models.CharField(unique=True, max_length=50)
-    description = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'role'
+# class Role(models.Model):
+#     name = models.CharField(unique=True, max_length=50)
+#     description = models.TextField(blank=True, null=True)
+#     created_at = models.DateTimeField()
+#     updated_at = models.DateTimeField()
+#
+    # class Meta:
+    #     managed = False
+    #     db_table = 'role'
 
 
 class RolePermission(models.Model):

@@ -147,6 +147,10 @@ class RolePermissionSerializer(serializers.ModelSerializer):
         exclude = ['role', ]
 
 
+class UserRoleSerializer(serializers.Serializer):
+    role_id = serializers.IntegerField()
+
+
 class MultipleRolePermissionsSerializer(serializers.Serializer):
     permissions = serializers.ListSerializer(child=serializers.CharField())
 

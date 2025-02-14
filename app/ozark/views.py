@@ -14,7 +14,7 @@ from .models import Config, User, Product, Person, Profile, ProfileAttribute, Bl
     RolePermission
 from .serializers import ConfigSerializer, ProductSerializer, PersonSerializer, BlacklistPersonSerializer, \
     ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer, UserSerializer, GroupSerializer, \
-    RolePermissionSerializer, MultipleRolePermissionsSerializer
+    RolePermissionSerializer, MultipleRolePermissionsSerializer, UserRoleSerializer
 
 
 
@@ -237,6 +237,30 @@ class RolePermissionViewSet(DbAuthenticatedViewSet):
                 role.role_permissions.get(role=role, permission=permission).delete()
 
         return Response(serializer.data, 204)
+
+
+class UserRoleViewSet(DbAuthenticatedViewSet):
+    queryset = AuthUser.objects.all()
+    serializer_class = UserRoleSerializer
+
+    def create(self, request, pk):
+        user = get_object_or_404(AuthUser, pk=pk)
+        serializer = UserRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            self.authenticate(request)
+            user.groups.add(serializer.validated_data['role_id'])
+
+        return Response(serializer.data, 201)
+
+    def delete(self, request, user_id, role_id):
+        user = get_object_or_404(AuthUser, pk=user_id)
+        role = get_object_or_404(AuthGroup, pk=role_id)
+        with transaction.atomic():
+            self.authenticate(request)
+            user.groups.remove(role)
+
+        return Response(status=204)
 
 
 class ProfileViewSet(DbAuthenticatedViewSet):
