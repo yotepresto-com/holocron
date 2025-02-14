@@ -187,12 +187,10 @@ The server should return:
   ```json
   [
     {
-      "permission": "create_user",
-      "description": "Allows creating a new user"
+      "permission": "create_user"
     },
     {
-      "permission": "read_user",
-      "description": "Allows reading user details"
+      "permission": "read_user"
     }
   ]
   ```

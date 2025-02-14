@@ -39,6 +39,9 @@ urlpatterns = [
     path('users/<int:user_id>/roles/<int:role_id>/', UserRoleViewSet.as_view({'delete': 'delete'})),
 
 
+    # permissions
+    path('permissions/', ConfigViewSet.as_view({'get': 'list_permissions'})),
+
     # Profile Management
     #path('profiles/', ProfileViewSet.create_profile, name='create_profile'),
     #path('profiles/<int:id>/', ProfileViewSet.get_profile_by_id, name='get_profile_by_id'),

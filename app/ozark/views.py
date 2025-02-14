@@ -1,5 +1,4 @@
 from django.db.models import Q
-from django.contrib.auth.models import User as AuthUser, Group as AuthGroup
 from django.db import connection, transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -8,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.authentication import TokenAuthentication
+from django.contrib.auth.models import User as AuthUser, Group as AuthGroup
 
 
 from .models import Config, User, Product, Person, Profile, ProfileAttribute, BlacklistPerson, Blacklist, \
@@ -55,6 +55,16 @@ class ConfigViewSet(DbAuthenticatedViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
+
+    def list_permissions(self, request):
+        sql = "SELECT unnest(enum_range(NULL::permission_type))::text as name order by 1;"
+        res = []
+        with connection.cursor() as cursor:
+            cursor.execute(sql, [])
+            permissions = cursor.fetchall()
+        for permission in permissions:
+            res.append({'permission': permission[0]})
+        return Response(res)
 
 
 class ProductViewSet(DbAuthenticatedViewSet):
