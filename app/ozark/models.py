@@ -318,17 +318,6 @@ class RiskMatrix(models.Model):
         db_table = 'risk_matrix'
 
 
-# class Role(models.Model):
-#     name = models.CharField(unique=True, max_length=50)
-#     description = models.TextField(blank=True, null=True)
-#     created_at = models.DateTimeField()
-#     updated_at = models.DateTimeField()
-#
-    # class Meta:
-    #     managed = False
-    #     db_table = 'role'
-
-
 class RolePermission(models.Model):
     role = models.ForeignKey(AuthGroup, models.DO_NOTHING, related_name='role_permissions')
     permission = models.TextField()  # This field type is a guess.
@@ -376,28 +365,3 @@ class UnusualOperations(models.Model):
     class Meta:
         managed = False
         db_table = 'unusual_operations'
-
-
-# TODO: remove, use the django user model
-class User(models.Model):
-    username = models.CharField(unique=True, max_length=50)
-    email = models.CharField(unique=True, max_length=255)
-    name = models.CharField(max_length=100, blank=True, null=True)
-    is_active = models.BooleanField(blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'user'
-
-
-# class UserRole(models.Model):
-#     user = models.ForeignKey(User, models.DO_NOTHING)
-#     role = models.ForeignKey(Role, models.DO_NOTHING)
-#     created_at = models.DateTimeField()
-#
-#     class Meta:
-#         managed = False
-#         db_table = 'user_role'
-#         unique_together = (('user', 'role'),)

@@ -1,11 +1,11 @@
 CREATE OR REPLACE FUNCTION create_test_user ()
-  RETURNS "user"
+  RETURNS auth_user
   AS $$
 DECLARE
-  _user "user";
+  _user auth_user;
 BEGIN
-  INSERT INTO "user" (username, email, name)
-    VALUES ('blabla', 'blabla@test.com', 'blabla')
+  INSERT INTO auth_user (username, email, first_name, last_name, password, is_superuser, is_staff, is_active, date_joined)
+    VALUES ('blabla', 'blabla@test.com', 'blabla', 'blabla ln', '', false, true, true, now())
   RETURNING
     * INTO _user;
   PERFORM

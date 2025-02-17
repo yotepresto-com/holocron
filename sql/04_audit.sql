@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
   record_id INTEGER NOT NULL,
   changed_data JSONB,
   changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  changed_by INTEGER NOT NULL REFERENCES "user" (id) ON DELETE SET NULL
+  changed_by INTEGER NOT NULL REFERENCES auth_user (id) ON DELETE SET NULL
 );
 
 -- Indexes to improve query performance on audit_log
