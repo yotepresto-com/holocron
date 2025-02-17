@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import Group as AuthGroup
+from django.contrib.auth.models import Group as AuthGroup, User as AuthUser
 
 
 class AuditLog(models.Model):
@@ -8,7 +8,7 @@ class AuditLog(models.Model):
     record_id = models.IntegerField()
     changed_data = models.JSONField(blank=True, null=True)
     changed_at = models.DateTimeField()
-    changed_by = models.ForeignKey('User', models.DO_NOTHING, db_column='changed_by')
+    changed_by = models.ForeignKey(AuthUser, models.DO_NOTHING, db_column='changed_by')
 
     class Meta:
         managed = False

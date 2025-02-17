@@ -10,7 +10,7 @@ from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth.models import User as AuthUser, Group as AuthGroup
 
 
-from .models import Config, User, Product, Person, Profile, ProfileAttribute, BlacklistPerson, Blacklist, \
+from .models import Config, Product, Person, Profile, ProfileAttribute, BlacklistPerson, Blacklist, \
     RolePermission
 from .serializers import ConfigSerializer, ProductSerializer, PersonSerializer, BlacklistPersonSerializer, \
     ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer, UserSerializer, GroupSerializer, \
@@ -23,10 +23,8 @@ class DbAuthenticatedViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def authenticate(self, request):
-        # TODO: use the django user model
-        user = User.objects.get(username=request.user.username)
         with connection.cursor() as cursor:
-            cursor.execute("select set_current_user_id(%s)", [user.id, ])
+            cursor.execute("select set_current_user_id(%s)", [request.user.id, ])
 
 
 class ConfigViewSet(DbAuthenticatedViewSet):
