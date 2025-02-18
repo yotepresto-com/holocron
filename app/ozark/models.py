@@ -62,7 +62,7 @@ class BlacklistNaturalPersonDetails(models.Model):
     full_name = models.TextField(blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    calculated_full_name = models.TextField(blank=True, null=True)
+    calculated_full_name = models.GeneratedField(expression=None,output_field=models.TextField(blank=True, null=True), db_persist=True)
 
     class Meta:
         managed = False

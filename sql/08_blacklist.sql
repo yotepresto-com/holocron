@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
   id SERIAL PRIMARY KEY,
   blacklist_person_id INTEGER NOT NULL UNIQUE REFERENCES blacklist_person (id) ON DELETE CASCADE,
   curp VARCHAR(18) CHECK (LENGTH(curp) = 18),
-  rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
+  rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 9 AND 13),
   name TEXT,
   first_last_name TEXT,
   second_last_name TEXT,
