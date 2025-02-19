@@ -26,7 +26,7 @@ class AuditLogAdmin(admin.ModelAdmin):
 class BlacklistPersonAdmin(admin.ModelAdmin):
     list_display = ('id', 'type', 'official_registration_number', 'created_at', 'updated_at', 'deleted_at', 'official_deletion_number')
     search_fields = ['natural_person_details__calculated_full_name']
-    search_fields = ['natural_person_details__calculated_full_name']
+    readonly_fields = ['natural_person_details', 'juridical_person_details', ]
 
 
 class BlacklistPersonTabAdmin(admin.TabularInline):
@@ -51,6 +51,7 @@ class BlacklistSearchAdmin(GenericAdmin):
     list_display = ('id', 'person', 'blacklist_person', 'match', 'match_score', 'blacklist', 'search_date', 'created_at', 'match_details')
     autocomplete_fields = ['person', 'blacklist_person']
 
+
 class ConfigAdmin(GenericAdmin):
     list_display = ('id', 'name', 'value', 'created_at', 'updated_at')
 
@@ -62,6 +63,7 @@ class ProductAdmin(GenericAdmin):
 class PersonAdmin(GenericAdmin):
     list_display = ('id', 'type', 'active', 'created_at', 'updated_at', 'deleted_at')
     search_fields = ['natural_person_details__calculated_full_name', 'juridical_person_details__name']
+    readonly_fields = ['natural_person_details', 'juridical_person_details',]
 
 
 class NaturalPersonDetailsAdmin(GenericAdmin):

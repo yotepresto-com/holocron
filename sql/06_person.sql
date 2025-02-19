@@ -17,7 +17,7 @@ CREATE TRIGGER prevent_person_deletion
 CREATE TABLE IF NOT EXISTS natural_person_details (
   person_id INTEGER NOT NULL REFERENCES person (id) ON DELETE CASCADE,
   curp VARCHAR(18) CHECK (LENGTH(curp) = 18),
-  rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
+  rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 10 AND 13),
   name TEXT NOT NULL,
   first_last_name TEXT NOT NULL,
   second_last_name TEXT,

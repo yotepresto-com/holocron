@@ -23,6 +23,9 @@ class Blacklist(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.name
+
     class Meta:
         managed = False
         db_table = 'blacklist'
@@ -47,6 +50,9 @@ class BlacklistJuridicalPersonDetails(models.Model):
     incorporation_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField()
 
+    def __str__(self):
+        return f'{self.legal_name} ({self.rfc})'
+
     class Meta:
         managed = False
         db_table = 'blacklist_juridical_person_details'
@@ -63,6 +69,9 @@ class BlacklistNaturalPersonDetails(models.Model):
     date_of_birth = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     calculated_full_name = models.GeneratedField(expression=None,output_field=models.TextField(blank=True, null=True), db_persist=True)
+
+    def __str__(self):
+        return f'{self.calculated_full_name} ({self.curp}) ({self.rfc})'
 
     class Meta:
         managed = False
@@ -81,9 +90,9 @@ class BlacklistPerson(models.Model):
 
     def __str__(self):
         if self.type == 'natural':
-            return self.natural_person_details.calculated_full_name
+            return str(self.natural_person_details)
         else:
-            return self.juridical_person_details.legal_name
+            return str(self.juridical_person_details)
 
     class Meta:
         managed = False
@@ -122,6 +131,9 @@ class JuridicalPersonDetails(models.Model):
     incorporation_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f'{self.legal_name} ({self.rfc})'
+
     class Meta:
         managed = False
         db_table = 'juridical_person_details'
@@ -138,6 +150,9 @@ class NaturalPersonDetails(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     full_name = models.GeneratedField(expression=None, output_field=models.TextField(), db_persist=True)
 
+    def __str__(self):
+        return f'{self.full_name} ({self.curp}) ({self.rfc})'
+
     class Meta:
         managed = False
         db_table = 'natural_person_details'
@@ -152,9 +167,9 @@ class Person(models.Model):
 
     def __str__(self):
         if self.type == 'natural':
-            return self.natural_person_details.full_name
+            return str(self.natural_person_details)
         else:
-            return self.juridical_person_details.legal_name
+            return str(self.juridical_person_details)
 
     class Meta:
         managed = False

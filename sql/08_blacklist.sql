@@ -123,7 +123,7 @@ CREATE OR REPLACE FUNCTION compute_match_score(
     query_first_surname  TEXT,
     query_second_surname TEXT,
     blacklist_name       TEXT
-) RETURNS INTEGER
+) RETURNS DOUBLE PRECISION
 AS
 $$
 DECLARE
@@ -262,7 +262,7 @@ BEGIN
     overall_score := 0.5 * best_given_score + 0.5 * surname_score;
 
     -- Scale to a 0-100 range and round.
-    RETURN round(overall_score * 100);
+    RETURN overall_score;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -347,13 +347,14 @@ BEGIN
       npd.person_id,
       NEW.blacklist_person_id,
       TRUE,
-      blacklist_natural_person_match_fn(
-              npd.name,
-              npd.first_last_name,
-              npd.second_last_name,
-              NEW.name,
-              NEW.first_last_name || coalesce(' ' || NEW.second_last_name, ''),
-              NEW.full_name),
+      compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name),
+--       blacklist_natural_person_match_fn(
+--               npd.name,
+--               npd.first_last_name,
+--               npd.second_last_name,
+--               NEW.name,
+--               NEW.first_last_name || coalesce(' ' || NEW.second_last_name, ''),
+--               NEW.full_name),
       CURRENT_DATE
     FROM
       natural_person_details npd;
