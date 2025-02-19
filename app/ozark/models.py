@@ -79,6 +79,12 @@ class BlacklistPerson(models.Model):
     official_deletion_number = models.CharField(blank=True, null=True, max_length=100)
     attributes = models.JSONField()
 
+    def __str__(self):
+        if self.type == 'natural':
+            return self.natural_person_details.calculated_full_name
+        else:
+            return self.juridical_person_details.legal_name
+
     class Meta:
         managed = False
         db_table = 'blacklist_person'
@@ -143,6 +149,12 @@ class Person(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        if self.type == 'natural':
+            return self.natural_person_details.full_name
+        else:
+            return self.juridical_person_details.legal_name
 
     class Meta:
         managed = False

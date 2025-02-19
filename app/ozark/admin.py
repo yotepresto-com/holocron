@@ -23,23 +23,33 @@ class AuditLogAdmin(admin.ModelAdmin):
     #search_fields = ()
 
 
-class BlacklistPersonAdmin(admin.TabularInline):
+class BlacklistPersonAdmin(admin.ModelAdmin):
     list_display = ('id', 'type', 'official_registration_number', 'created_at', 'updated_at', 'deleted_at', 'official_deletion_number')
+    search_fields = ['natural_person_details__calculated_full_name']
+    search_fields = ['natural_person_details__calculated_full_name']
+
+
+class BlacklistPersonTabAdmin(admin.TabularInline):
+    list_display = ('id', 'type', 'official_registration_number', 'created_at', 'updated_at', 'deleted_at', 'official_deletion_number')
+
     model = BlacklistPerson
 
 
 class BlacklistAdmin(GenericAdmin):
     list_display = ('id', 'name', 'description', 'created_at', 'updated_at')
-    inlines = [BlacklistPersonAdmin,]
+    inlines = [BlacklistPersonTabAdmin,]
 
 
 class BlacklistAlertAdmin(GenericAdmin):
     list_display = ('id', 'blacklist_search', 'state', 'date', 'created_at', 'updated_at')
 
-
+# TODO: Fix N+1 queries
 class BlacklistSearchAdmin(GenericAdmin):
-    list_display = ('id', 'person', 'blacklist_person', 'match', 'match_score', 'search_date', 'created_at', 'match_details')
+    def blacklist(self, obj):
+        return obj.blacklist_person.blacklist.name
 
+    list_display = ('id', 'person', 'blacklist_person', 'match', 'match_score', 'blacklist', 'search_date', 'created_at', 'match_details')
+    autocomplete_fields = ['person', 'blacklist_person']
 
 class ConfigAdmin(GenericAdmin):
     list_display = ('id', 'name', 'value', 'created_at', 'updated_at')
@@ -51,6 +61,7 @@ class ProductAdmin(GenericAdmin):
 
 class PersonAdmin(GenericAdmin):
     list_display = ('id', 'type', 'active', 'created_at', 'updated_at', 'deleted_at')
+    search_fields = ['natural_person_details__calculated_full_name', 'juridical_person_details__name']
 
 
 class NaturalPersonDetailsAdmin(GenericAdmin):
@@ -71,3 +82,4 @@ admin.site.register(Product, ProductAdmin)
 admin.site.register(Person, PersonAdmin)
 admin.site.register(NaturalPersonDetails, NaturalPersonDetailsAdmin)
 admin.site.register(BlacklistNaturalPersonDetails, BlacklistNaturalPersonDetailsAdmin)
+admin.site.register(BlacklistPerson, BlacklistPersonAdmin)
