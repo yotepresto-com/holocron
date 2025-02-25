@@ -158,6 +158,7 @@ DECLARE
     names_matched_count INT := 0;
 
     last_name_start_index INT := 1;
+    surname_best_indexes INT[] := '{}';
 BEGIN
     -- Build query surname tokens array (ignore empty strings)
     IF length(trim(norm_query_first_surname)) > 0 THEN
@@ -189,7 +190,7 @@ BEGIN
              IF used_indices[j] = false THEN
                 current_score := fuzzy_match_score(query_surname_tokens[i], blacklist_tokens[j]);
                 --raise notice 'fuzzy_match_score: %, %: %', query_surname_tokens[i], blacklist_tokens[j], current_score; --DELETE
-                if current_score > 0.9 then
+                if current_score >= 0.9 then
                     last_name_start_index := j + 1;
                 end if;
                 IF current_score > best_score THEN
@@ -201,6 +202,7 @@ BEGIN
          surname_scores := surname_scores || best_score;
          IF best_index IS NOT NULL THEN
              used_indices[best_index] := true;
+             surname_best_indexes := surname_best_indexes || best_index;
          END IF;
     END LOOP;
 
@@ -236,6 +238,15 @@ BEGIN
         surname_score := surname_score + surname_scores[i];
     END LOOP;
     surname_score := surname_score / array_length(surname_scores,1);
+
+    -- Penalize the score if the order of the matches is not right
+    for i in 1 .. coalesce(array_length(surname_best_indexes, 1) - 1, 0) loop
+        if surname_best_indexes[i] > surname_best_indexes[i+1] then
+            surname_score := surname_score * 0.9;
+        end if;
+    end loop;
+    --raise notice 'surname_best_indexes: %', surname_best_indexes; --DELETE
+
     --raise notice 'surname_scores: %', surname_scores; --DELETE
     --raise notice 'surname_score: %', surname_score; --DELETE
 
@@ -283,8 +294,11 @@ BEGIN
     -----------------------------
     -- STEP 3: Combine Scores
     -----------------------------
-    -- We weight the given–name match as 70% and the surname match as 30%.
-    overall_score := 0.5 * best_given_score + 0.5 * surname_score;
+    if array_length(query_surname_tokens, 1) > 1 and array_length(query_given_tokens, 1) = 1 then
+        overall_score := 0.4 * best_given_score + 0.6 * surname_score;
+    else
+        overall_score := 0.5 * best_given_score + 0.5 * surname_score;
+    end if;
 
     -- Scale to a 0-100 range and round.
     RETURN overall_score;
