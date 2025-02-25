@@ -59,12 +59,12 @@ CREATE INDEX IF NOT EXISTS idx_full_name_trgm_blacklist_natural_details ON black
 
 -- Juridical Person Blacklist
 CREATE TABLE IF NOT EXISTS blacklist_juridical_person_details (
+  id SERIAL PRIMARY KEY,
   blacklist_person_id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
   rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
   legal_name TEXT NOT NULL,
   incorporation_date DATE,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  PRIMARY KEY (blacklist_person_id)
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- Natural Person TRIGGERS
@@ -172,6 +172,8 @@ BEGIN
         used_indices := ARRAY[]::BOOLEAN[];
     END IF;
 
+    --raise notice 'query_given_names: %', query_given_names; --DELETE
+
     -----------------------------
     -- STEP 1: Surname Matching
     -----------------------------
@@ -182,6 +184,7 @@ BEGIN
          FOR j IN 1 .. token_count LOOP
              IF used_indices[j] = false THEN
                 current_score := fuzzy_match_score(query_surname_tokens[i], blacklist_tokens[j]);
+                --raise notice 'fuzzy_match_score: %, %: %', query_surname_tokens[i], blacklist_tokens[j], current_score; --DELETE
                 IF current_score > best_score THEN
                    best_score := current_score;
                    best_index := j;
@@ -194,28 +197,41 @@ BEGIN
          END IF;
     END LOOP;
 
+    raise notice 'query_surname_tokens: %', query_surname_tokens; --DELETE
+    raise notice 'surname_scores: %', surname_scores; --DELETE
+
+
+
     -- Special rule: If there are two query surnames but fewer than two tokens matched,
     -- then we require that the first surname (paternal) is matched strongly.
-    IF COALESCE(array_length(query_surname_tokens,1),0) = 2 THEN
-         IF array_length(surname_scores,1) = 2 THEN
-             IF surname_scores[1] >= 0.9 THEN
-                surname_score := 1.0;
-             ELSE
-                surname_score := (surname_scores[1] + surname_scores[2]) / 2.0;
-             END IF;
-         ELSE
-             surname_score := 0.0;
-         END IF;
-    ELSIF COALESCE(array_length(query_surname_tokens,1),0) > 0 THEN
-         -- Otherwise, average the scores for the surnames.
-         surname_score := 0;
-         FOR i IN 1 .. array_length(surname_scores,1) LOOP
-             surname_score := surname_score + surname_scores[i];
-         END LOOP;
-         surname_score := surname_score / array_length(surname_scores,1);
-    ELSE
-         surname_score := 1.0;
-    END IF;
+--     IF COALESCE(array_length(query_surname_tokens,1),0) = 2 THEN
+--          IF array_length(surname_scores,1) = 2 THEN
+--              IF surname_scores[1] >= 0.9 THEN
+--                  raise notice 'Special rule: first surname matched strongly'; --DELETE
+--                 surname_score := 1.0;
+--              ELSE
+--                 surname_score := (surname_scores[1] + surname_scores[2]) / 2.0;
+--              END IF;
+--          ELSE
+--              surname_score := 0.0;
+--          END IF;
+--     ELSIF COALESCE(array_length(query_surname_tokens,1),0) > 0 THEN
+--          -- Otherwise, average the scores for the surnames.
+--          surname_score := 0;
+--          FOR i IN 1 .. array_length(surname_scores,1) LOOP
+--              surname_score := surname_score + surname_scores[i];
+--          END LOOP;
+--          surname_score := surname_score / array_length(surname_scores,1);
+--     ELSE
+--          surname_score := 1.0;
+--     END IF;
+
+    surname_score := 0;
+    FOR i IN 1 .. array_length(surname_scores,1) LOOP
+        surname_score := surname_score + surname_scores[i];
+    END LOOP;
+    surname_score := surname_score / array_length(surname_scores,1);
+    raise notice 'surname_score: %', surname_score; --DELETE
 
     -----------------------------
     -- STEP 2: Given Names Matching
@@ -241,6 +257,7 @@ BEGIN
              END IF;
          END LOOP;
     END LOOP;
+    --raise notice 'best_given_score: %', best_given_score; --DELETE
 
     -- If the best given–name match did not come from the first (primary) token, apply a penalty.
     IF best_given_name_position IS NOT NULL AND best_given_name_position > 1 THEN
@@ -249,11 +266,13 @@ BEGIN
          penalty := 0;
     END IF;
     best_given_score := GREATEST(0, best_given_score - penalty);
+    raise notice 'best_given_score2: %', best_given_score; --DELETE
 
     -- If not all given names matched, reduce the score.
     if names_matched_count < COALESCE(array_length(query_given_tokens,1),0) then
-        best_given_score := best_given_score * 0.9;
+        best_given_score := best_given_score * 0.8;
     end if;
+    raise notice 'best_given_score3: %', best_given_score; --DELETE
 
     -----------------------------
     -- STEP 3: Combine Scores
@@ -264,7 +283,8 @@ BEGIN
     -- Scale to a 0-100 range and round.
     RETURN overall_score;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+IMMUTABLE;
 
 
 CREATE OR REPLACE FUNCTION blacklist_natural_person_match_fn(
@@ -357,8 +377,10 @@ BEGIN
 --               NEW.full_name),
       CURRENT_DATE
     FROM
-      natural_person_details npd;
---     WHERE
+      natural_person_details npd
+    WHERE
+      -- TODO: change the hardcoded 0.9 to a config
+      compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9;
 --       levenshtein (npd.full_name, NEW.full_name) < min_distance; TODO: Add a config flag to toggle this on/off
    RETURN NEW;
 END;
