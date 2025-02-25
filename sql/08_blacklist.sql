@@ -99,7 +99,7 @@ BEGIN
     END IF;
 
     -- Phonetic check using dmetaphone (provided by fuzzystrmatch)
-    IF dmetaphone(token1) = dmetaphone(token2) THEN
+    IF soundex(token1) = soundex(token2) THEN
        phonetic_score := 0.95;
     ELSE
        phonetic_score := 0.0;
@@ -156,6 +156,8 @@ DECLARE
 
     overall_score DOUBLE PRECISION;
     names_matched_count INT := 0;
+
+    last_name_start_index INT := 1;
 BEGIN
     -- Build query surname tokens array (ignore empty strings)
     IF length(trim(norm_query_first_surname)) > 0 THEN
@@ -173,6 +175,7 @@ BEGIN
     END IF;
 
     --raise notice 'query_given_names: %', query_given_names; --DELETE
+    --raise notice 'blacklist_tokens: %', blacklist_tokens; --DELETE
 
     -----------------------------
     -- STEP 1: Surname Matching
@@ -181,10 +184,14 @@ BEGIN
     FOR i IN 1 .. COALESCE(array_length(query_surname_tokens,1),0) LOOP
          best_score := 0;
          best_index := NULL;
-         FOR j IN 1 .. token_count LOOP
+         --raise notice 'last_name_start_index: %, %', last_name_start_index, query_surname_tokens[i]; --DELETE
+         FOR j IN last_name_start_index .. token_count LOOP
              IF used_indices[j] = false THEN
                 current_score := fuzzy_match_score(query_surname_tokens[i], blacklist_tokens[j]);
                 --raise notice 'fuzzy_match_score: %, %: %', query_surname_tokens[i], blacklist_tokens[j], current_score; --DELETE
+                if current_score > 0.9 then
+                    last_name_start_index := j + 1;
+                end if;
                 IF current_score > best_score THEN
                    best_score := current_score;
                    best_index := j;
@@ -197,10 +204,8 @@ BEGIN
          END IF;
     END LOOP;
 
-    raise notice 'query_surname_tokens: %', query_surname_tokens; --DELETE
-    raise notice 'surname_scores: %', surname_scores; --DELETE
-
-
+    --raise notice 'query_surname_tokens: %', query_surname_tokens; --DELETE
+    --raise notice 'surname_scores: %', surname_scores; --DELETE
 
     -- Special rule: If there are two query surnames but fewer than two tokens matched,
     -- then we require that the first surname (paternal) is matched strongly.
@@ -231,7 +236,8 @@ BEGIN
         surname_score := surname_score + surname_scores[i];
     END LOOP;
     surname_score := surname_score / array_length(surname_scores,1);
-    raise notice 'surname_score: %', surname_score; --DELETE
+    --raise notice 'surname_scores: %', surname_scores; --DELETE
+    --raise notice 'surname_score: %', surname_score; --DELETE
 
     -----------------------------
     -- STEP 2: Given Names Matching
@@ -266,13 +272,13 @@ BEGIN
          penalty := 0;
     END IF;
     best_given_score := GREATEST(0, best_given_score - penalty);
-    raise notice 'best_given_score2: %', best_given_score; --DELETE
+    --raise notice 'best_given_score2: %', best_given_score; --DELETE
 
     -- If not all given names matched, reduce the score.
     if names_matched_count < COALESCE(array_length(query_given_tokens,1),0) then
         best_given_score := best_given_score * 0.8;
     end if;
-    raise notice 'best_given_score3: %', best_given_score; --DELETE
+    --raise notice 'best_given_score3: %', best_given_score; --DELETE
 
     -----------------------------
     -- STEP 3: Combine Scores
