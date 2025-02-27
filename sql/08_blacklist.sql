@@ -159,6 +159,7 @@ DECLARE
 
     last_name_start_index INT := 1;
     surname_best_indexes INT[] := '{}';
+    best_given_name_position_blacklist INT;
 BEGIN
     -- Build query surname tokens array (ignore empty strings)
     IF length(trim(norm_query_first_surname)) > 0 THEN
@@ -255,9 +256,12 @@ BEGIN
     -----------------------------
     -- Use any remaining blacklist tokens (those not used for surname matching).
     FOR i IN 1 .. COALESCE(array_length(query_given_tokens,1),0) LOOP
+        --raise notice 'used_indices: %', used_indices; --DELETE
          FOR j IN 1 .. token_count LOOP
              IF used_indices[j] = false THEN
+
                 current_score := fuzzy_match_score(query_given_tokens[i], blacklist_tokens[j]);
+                --raise notice '%, %. %', query_given_tokens[i], blacklist_tokens[j], current_score; --DELETE
 
                 -- for short given names, we allow a lower score to match
                 if current_score >= 0.75 and current_score < 0.9 and length(query_given_tokens[i]) < 5 then
@@ -270,11 +274,18 @@ BEGIN
                 IF current_score > best_given_score THEN
                    best_given_score := current_score;
                    best_given_name_position := i;  -- save the position (1 = primary given name)
+                   if current_score >= 0.9 then
+                       used_indices[j] := true;
+                       best_given_name_position_blacklist := j;
+                   end if;
                 END IF;
              END IF;
          END LOOP;
     END LOOP;
+    --raise notice 'used_indices: %', used_indices; --DELETE
+    --raise notice 'best_given_name_position_blacklist: %', best_given_name_position_blacklist; --DELETE
     --raise notice 'best_given_score: %', best_given_score; --DELETE
+    --raise notice 'best_given_name_position: %', best_given_name_position; --DELETE
 
     -- If the best given–name match did not come from the first (primary) token, apply a penalty.
     IF best_given_name_position IS NOT NULL AND best_given_name_position > 1 THEN
@@ -282,6 +293,12 @@ BEGIN
     ELSE
          penalty := 0;
     END IF;
+
+    -- penalize if the firt name matches the second name
+    if best_given_name_position = 1 and best_given_name_position_blacklist = 2 and used_indices[1] = false then
+        penalty := penalty + 0.1;
+    end if;
+
     best_given_score := GREATEST(0, best_given_score - penalty);
     --raise notice 'best_given_score2: %', best_given_score; --DELETE
 
