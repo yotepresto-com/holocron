@@ -93,8 +93,8 @@ BEGIN
     -- Abbreviation rule:
     -- If one token is very short (length <= 2) and its first character
     -- equals the first character of the other token, return 0.95.
-    IF (char_length(token1) <= 2 AND substring(token2,1,1) = substring(token1,1,1))
-       OR (char_length(token2) <= 2 AND substring(token1,1,1) = substring(token2,1,1)) THEN
+    IF (char_length(token1) <= 2 AND token1 not in ('de') AND substring(token2,1,1) = substring(token1,1,1))
+       OR (char_length(token2) <= 2 AND token2 not in ('de') AND substring(token1,1,1) = substring(token2,1,1)) THEN
        RETURN 0.95;
     END IF;
 
