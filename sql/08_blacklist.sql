@@ -99,7 +99,7 @@ BEGIN
     END IF;
 
     -- Phonetic check using dmetaphone (provided by fuzzystrmatch)
-    IF soundex(token1) = soundex(token2) THEN
+    IF soundex(token1) = soundex(token2) and daitch_mokotoff(token1) = daitch_mokotoff(token2) THEN
        phonetic_score := 0.95;
     ELSE
        phonetic_score := 0.0;
@@ -161,6 +161,10 @@ DECLARE
     surname_best_indexes INT[] := '{}';
     best_given_name_position_blacklist INT;
 BEGIN
+    if upper(blacklist_name) like 'REP. LEGAL DE LA SUCESION%' then
+        return 0.0;
+    end if;
+
     -- Build query surname tokens array (ignore empty strings)
     IF length(trim(norm_query_first_surname)) > 0 THEN
        query_surname_tokens := query_surname_tokens || norm_query_first_surname;
@@ -209,30 +213,6 @@ BEGIN
 
     --raise notice 'query_surname_tokens: %', query_surname_tokens; --DELETE
     --raise notice 'surname_scores: %', surname_scores; --DELETE
-
-    -- Special rule: If there are two query surnames but fewer than two tokens matched,
-    -- then we require that the first surname (paternal) is matched strongly.
---     IF COALESCE(array_length(query_surname_tokens,1),0) = 2 THEN
---          IF array_length(surname_scores,1) = 2 THEN
---              IF surname_scores[1] >= 0.9 THEN
---                  raise notice 'Special rule: first surname matched strongly'; --DELETE
---                 surname_score := 1.0;
---              ELSE
---                 surname_score := (surname_scores[1] + surname_scores[2]) / 2.0;
---              END IF;
---          ELSE
---              surname_score := 0.0;
---          END IF;
---     ELSIF COALESCE(array_length(query_surname_tokens,1),0) > 0 THEN
---          -- Otherwise, average the scores for the surnames.
---          surname_score := 0;
---          FOR i IN 1 .. array_length(surname_scores,1) LOOP
---              surname_score := surname_score + surname_scores[i];
---          END LOOP;
---          surname_score := surname_score / array_length(surname_scores,1);
---     ELSE
---          surname_score := 1.0;
---     END IF;
 
     surname_score := 0;
     FOR i IN 1 .. array_length(surname_scores,1) LOOP
