@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS blacklist_search (
-  id SERIAL PRIMARY KEY,
+  id BIGSERIAL PRIMARY KEY,
   person_id INTEGER REFERENCES person (id),
   blacklist_person_id INTEGER REFERENCES blacklist_person (id),
   match BOOLEAN,

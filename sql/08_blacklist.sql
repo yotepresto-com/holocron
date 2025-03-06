@@ -98,12 +98,12 @@ BEGIN
        RETURN 0.95;
     END IF;
 
-    -- Phonetic check using dmetaphone (provided by fuzzystrmatch)
-    IF soundex(token1) = soundex(token2) and daitch_mokotoff(token1) = daitch_mokotoff(token2) THEN
-       phonetic_score := 0.95;
-    ELSE
-       phonetic_score := 0.0;
-    END IF;
+    -- Phonetic check
+    --IF soundex(token1) = soundex(token2) and daitch_mokotoff(token1) = daitch_mokotoff(token2) THEN
+    --   phonetic_score := 0.95;
+    --ELSE
+    --   phonetic_score := 0.0;
+    --END IF;
 
     -- Compute Levenshtein similarity ratio.
     max_len := GREATEST(char_length(token1), char_length(token2));
@@ -118,7 +118,215 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION compute_match_score(
+
+create or replace function compute_match_score(
+    first_name text,
+    last_name text,
+    second_last_name text,
+    bl_full_name text
+) returns float
+as $$
+declare
+    i int;
+    j int;
+    match_names bool := false;
+    match_name1 bool := false;
+    match_name2 bool := false;
+    match_last_names bool := false;
+    match_last_name1 bool := false;
+    match_last_name2 bool := false;
+    bl_full_name_tokens text[];
+    bl_mached_tokens bool[];
+    first_name_tokens text[];
+    match_first_name1_idx int;
+    match_first_name2_idx int;
+    match_last_name1_idx int;
+    match_last_name2_idx int;
+    distance2 int;
+    distance int;
+    distance_result float;
+    full_name text;
+    max_len int;
+begin
+    bl_full_name := unaccent(upper(bl_full_name));
+    first_name := unaccent(upper(first_name));
+    last_name := unaccent(upper(last_name));
+    second_last_name := unaccent(upper(second_last_name));
+
+    bl_full_name_tokens := string_to_array(bl_full_name, ' ');
+    first_name_tokens := string_to_array(first_name, ' ');
+
+    bl_mached_tokens :=  (select array_agg(f) from (select false as f from unnest(bl_full_name_tokens)));
+    full_name := trim(first_name || ' ' || last_name || ' ' || coalesce(second_last_name, ''));
+
+    if bl_full_name = full_name then
+        return 1.0;
+    end if;
+
+    max_len := GREATEST(length(full_name), length(bl_full_name));
+
+    IF max_len = 0 THEN
+        RETURN 0.0;
+    END IF;
+
+    distance := levenshtein(full_name, bl_full_name);
+    distance_result := (1.0 * (max_len - distance)) / max_len;
+
+    -- TODO: cambiar el 0.9 por una configuración
+    if distance_result >= 0.9 then
+        return distance_result;
+    end if;
+
+    -- primero apellidos y luego nombres
+    distance2 := levenshtein(trim(last_name || coalesce(' ' || second_last_name, '') || ' ' || first_name), bl_full_name);
+    distance_result := greatest(distance_result, 1.0 * (max_len - distance2) / max_len);
+
+    -- TODO: cambiar el 0.9 por una configuración
+    if distance_result >= 0.9 then
+        return distance_result;
+    end if;
+
+    -- first name
+    for i in 1 .. coalesce(array_length(first_name_tokens, 1), 0) loop
+        for j in 1 .. coalesce(array_length(bl_full_name_tokens, 1), 0) loop
+            if bl_mached_tokens[j] then
+                continue;
+            end if;
+
+            --if bl_full_name_tokens[j] = first_name_tokens[i] then
+            if fuzzy_match_score(bl_full_name_tokens[j], first_name_tokens[i]) >= 0.9 then
+
+                bl_mached_tokens[j] := true;
+                if i = 1 then
+                    match_first_name1_idx := j;
+                    match_name1 := true;
+                else
+                    match_first_name2_idx := j;
+                    match_name2 := true;
+                end if;
+
+                exit;
+            end if;
+        end loop;
+    end loop;
+
+    if array_length(first_name_tokens, 1) = 1 then
+        match_names := match_name1;
+    else
+        match_names := match_name1 OR match_name2;
+    end if;
+
+    -- last name1
+    for j in 1 .. coalesce(array_length(bl_full_name_tokens, 1), 0) loop
+        if bl_mached_tokens[j] then
+            continue;
+        end if;
+
+        --if bl_full_name_tokens[j] = last_name then
+        if fuzzy_match_score(bl_full_name_tokens[j], last_name) >= 0.9 then
+            match_last_name1 := true;
+            bl_mached_tokens[j] := true;
+            match_last_name1_idx := j;
+            exit;
+        end if;
+    end loop;
+
+    if match_names then
+        -- coincide el primer nombre con el primero de la lista negra pero el segundo no y el apellido va después del nombre
+        if match_first_name1_idx > 1 and bl_mached_tokens[match_first_name1_idx - 1] is false and match_last_name1 and match_last_name1_idx > match_first_name1_idx then
+            match_names := false;
+        end if;
+
+        -- coincide el primer nombre con el primero de la lista negra pero el segundo no y el apellido va antes del nombre
+        if match_last_name1 and match_last_name1_idx < match_first_name1_idx and match_name2 is false and array_length(bl_mached_tokens, 1) > match_first_name1_idx and bl_mached_tokens[match_first_name1_idx + 1] is false then
+            match_names := false;
+        end if;
+
+        -- coincide el segundo nombre con el segundo de la lista negra pero el primero no
+        if match_name2 and not match_name1 and match_first_name2_idx < match_last_name1_idx and match_first_name2_idx > 1 and bl_mached_tokens[match_first_name2_idx - 1] is false then
+            match_names := false;
+        end if;
+
+        -- el segundo nombre coincide con el primero y hay un segundo nombre en la lista negra que no coincide
+        if match_name1 is false and match_name2 and match_first_name2_idx = 1 and match_last_name1 and match_last_name1_idx > 2 then
+            match_names := false;
+        end if;
+    end if;
+
+    -- last name2
+    if second_last_name = '' or second_last_name is null then
+        match_last_name2 := true;
+        match_last_name2_idx := match_last_name1_idx + 999; -- to make it bigger than the first last name index
+    else
+        for j in 1 .. coalesce(array_length(bl_full_name_tokens, 1), 0) loop
+            if bl_mached_tokens[j] then
+                continue;
+            end if;
+
+            --if bl_full_name_tokens[j] = second_last_name then
+            if fuzzy_match_score(bl_full_name_tokens[j], second_last_name) >= 0.9 then
+                match_last_name2 := true;
+                bl_mached_tokens[j] := true;
+                match_last_name2_idx := j;
+                exit;
+            end if;
+        end loop;
+    end if;
+
+    if match_last_name1 and match_last_name2 and match_last_name2_idx > match_last_name1_idx then
+        match_last_names := true;
+    end if;
+
+    /*
+    raise notice 'match_names: %', match_names; --DELETE
+    raise notice 'match_name1: %', match_name1; --DELETE
+    raise notice 'match_name2: %', match_name2; --DELETE
+    raise notice 'match_first_name1_idx: %', match_first_name1_idx; --DELETE
+    raise notice 'match_first_name2_idx: %', match_first_name2_idx; --DELETE
+    raise notice 'match_last_name1: %', match_last_name1; --DELETE
+    raise notice 'match_last_name2: %', match_last_name2; --DELETE
+    raise notice 'match_last_name1_idx: %', match_last_name1_idx; --DELETE
+    raise notice 'match_last_name2_idx: %', match_last_name2_idx; --DELETE
+    raise notice 'l: %', array_length(bl_full_name_tokens, 1); --DELETE
+    */
+
+    if match_names and match_last_names then
+        if match_last_name1_idx < coalesce(match_first_name1_idx, match_first_name2_idx) and match_last_name1_idx > 1 then
+            return distance_result;
+        end if;
+
+        -- tiene un apellido y hace match con el segundo apellido de la lista negra
+        if (second_last_name = '' or second_last_name is null) and match_last_name1_idx = 4 then
+            return distance_result;
+        end if;
+
+        if match_last_name1_idx - match_first_name1_idx > 1 then
+            for i in match_first_name1_idx + 1 .. match_last_name1_idx - 1 loop
+                if bl_mached_tokens[i] is false then
+                    return distance_result;
+                end if;
+            end loop;
+        end if;
+
+        -- coincide el segundo nombre con el segundo de la lista negra pero el primero no y los apellidos van antes de los nombres
+        if match_name2 and match_name1 is false and match_first_name2_idx - match_last_name2_idx > 1 then
+            return distance_result;
+        end if;
+
+        -- el segundo nombre coincide con el primero y hay un segundo nombre en la lista negra que no coincide y los apellidos van antes de los nombres
+        if match_name1 is false and match_name2 and match_last_name1_idx = 1 and match_first_name2_idx < array_length(bl_full_name_tokens, 1) then
+            return distance_result;
+        end if;
+
+        return 0.9;
+    else
+        return distance_result;
+    end if;
+end;
+$$ language plpgsql immutable parallel safe;
+
+
+CREATE OR REPLACE FUNCTION compute_match_score_OLD(
     query_given_names    TEXT,
     query_first_surname  TEXT,
     query_second_surname TEXT,
@@ -377,29 +585,32 @@ DECLARE
   _row_count INTEGER;
   min_distance INTEGER;
 BEGIN
-  min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
+  if (select bl_p.attributes->>'name_of_the_list' from blacklist_person bl_p where id = new.blacklist_person_id) in ('Condemnatory enforceable sentence by the commission of a tax offence (Article 69 of the Tax Code of the Federation)', 'List of taxpayers (Article 69-B of the Tax Code of the Federation)') then
+      min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
 
-    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
-    SELECT
-      npd.person_id,
-      NEW.blacklist_person_id,
-      TRUE,
-      compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name),
---       blacklist_natural_person_match_fn(
---               npd.name,
---               npd.first_last_name,
---               npd.second_last_name,
---               NEW.name,
---               NEW.first_last_name || coalesce(' ' || NEW.second_last_name, ''),
---               NEW.full_name),
-      CURRENT_DATE
-    FROM
-      natural_person_details npd
-    WHERE
-      -- TODO: change the hardcoded 0.9 to a config
-      compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9;
---       levenshtein (npd.full_name, NEW.full_name) < min_distance; TODO: Add a config flag to toggle this on/off
-   RETURN NEW;
+        INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
+        SELECT
+          npd.person_id,
+          NEW.blacklist_person_id,
+          TRUE,
+          compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name),
+    --       blacklist_natural_person_match_fn(
+    --               npd.name,
+    --               npd.first_last_name,
+    --               npd.second_last_name,
+    --               NEW.name,
+    --               NEW.first_last_name || coalesce(' ' || NEW.second_last_name, ''),
+    --               NEW.full_name),
+          CURRENT_DATE
+        FROM
+          natural_person_details npd
+        WHERE
+          -- TODO: change the hardcoded 0.9 to a config
+          compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9;
+    --       levenshtein (npd.full_name, NEW.full_name) < min_distance; TODO: Add a config flag to toggle this on/off
+  end if;
+
+  RETURN NEW;
 END;
 $$
 LANGUAGE plpgsql;
