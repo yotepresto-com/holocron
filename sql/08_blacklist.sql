@@ -61,7 +61,7 @@ CREATE INDEX IF NOT EXISTS idx_full_name_trgm_blacklist_natural_details ON black
 CREATE TABLE IF NOT EXISTS blacklist_juridical_person_details (
   id SERIAL PRIMARY KEY,
   blacklist_person_id INTEGER NOT NULL REFERENCES blacklist_person (id) ON DELETE CASCADE,
-  rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 12 AND 13),
+  rfc VARCHAR(13) CHECK (LENGTH(rfc) BETWEEN 9 AND 13),
   legal_name TEXT NOT NULL,
   incorporation_date DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -93,8 +93,8 @@ BEGIN
     -- Abbreviation rule:
     -- If one token is very short (length <= 2) and its first character
     -- equals the first character of the other token, return 0.95.
-    IF (char_length(token1) <= 2 AND token1 not in ('de') AND substring(token2,1,1) = substring(token1,1,1))
-       OR (char_length(token2) <= 2 AND token2 not in ('de') AND substring(token1,1,1) = substring(token2,1,1)) THEN
+    IF (char_length(token1) <= 2 AND token1 not in ('de') AND substring(token2,1,char_length(token1)) = substring(token1,1,char_length(token1)))
+       OR (char_length(token2) <= 2 AND token2 not in ('de') AND substring(token1,1,char_length(token1)) = substring(token2,1,char_length(token1))) THEN
        RETURN 0.95;
     END IF;
 
@@ -148,10 +148,10 @@ declare
     full_name text;
     max_len int;
 begin
-    bl_full_name := unaccent(upper(bl_full_name));
-    first_name := unaccent(upper(first_name));
-    last_name := unaccent(upper(last_name));
-    second_last_name := unaccent(upper(second_last_name));
+    bl_full_name := regexp_replace(unaccent(upper(bl_full_name)), '[[:punct:]]', '', 'g');
+    first_name := regexp_replace(unaccent(upper(first_name)), '[[:punct:]]', '', 'g');
+    last_name := regexp_replace(unaccent(upper(last_name)), '[[:punct:]]', '', 'g');
+    second_last_name := regexp_replace(unaccent(upper(second_last_name)), '[[:punct:]]', '', 'g');
 
     bl_full_name_tokens := string_to_array(bl_full_name, ' ');
     first_name_tokens := string_to_array(first_name, ' ');
@@ -585,30 +585,28 @@ DECLARE
   _row_count INTEGER;
   min_distance INTEGER;
 BEGIN
-  if (select bl_p.attributes->>'name_of_the_list' from blacklist_person bl_p where id = new.blacklist_person_id) in ('Condemnatory enforceable sentence by the commission of a tax offence (Article 69 of the Tax Code of the Federation)', 'List of taxpayers (Article 69-B of the Tax Code of the Federation)') then
-      min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
+    min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
 
-        INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
-        SELECT
-          npd.person_id,
-          NEW.blacklist_person_id,
-          TRUE,
-          compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name),
-    --       blacklist_natural_person_match_fn(
-    --               npd.name,
-    --               npd.first_last_name,
-    --               npd.second_last_name,
-    --               NEW.name,
-    --               NEW.first_last_name || coalesce(' ' || NEW.second_last_name, ''),
-    --               NEW.full_name),
-          CURRENT_DATE
-        FROM
-          natural_person_details npd
-        WHERE
-          -- TODO: change the hardcoded 0.9 to a config
-          compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9;
-    --       levenshtein (npd.full_name, NEW.full_name) < min_distance; TODO: Add a config flag to toggle this on/off
-  end if;
+    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
+    SELECT
+      npd.person_id,
+      NEW.blacklist_person_id,
+      TRUE,
+      compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name),
+--       blacklist_natural_person_match_fn(
+--               npd.name,
+--               npd.first_last_name,
+--               npd.second_last_name,
+--               NEW.name,
+--               NEW.first_last_name || coalesce(' ' || NEW.second_last_name, ''),
+--               NEW.full_name),
+      CURRENT_DATE
+    FROM
+      natural_person_details npd
+    WHERE
+      -- TODO: change the hardcoded 0.9 to a config
+      compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9;
+--       levenshtein (npd.full_name, NEW.full_name) < min_distance; TODO: Add a config flag to toggle this on/off
 
   RETURN NEW;
 END;
