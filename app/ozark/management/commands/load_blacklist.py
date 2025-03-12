@@ -19,19 +19,33 @@ class Command(BaseCommand):
 
     def load_blacklist_format_1(self, reader, blacklist, options):
         for i, row in enumerate(reader):
-            consecutivo, nombre, rfc, curp, nacionalidad, actividad, fecha, estatus, tipo, acciones = row
+            nombre, rfc, curp, nacionalidad, actividad, fecha, estatus, tipo, acciones = row
 
             curp = curp.strip() or None
             rfc = rfc.strip() or None
+            person_type = 'natural'
+
+            attributes = {
+                'nacionalidad': nacionalidad,
+                'actividad': actividad,
+                'fecha': fecha,
+                'estatus': estatus,
+            }
+
+            if acciones:
+                attributes['acciones'] = acciones
+
 
             if rfc and (len(rfc) > 13 or len(rfc) < 9):
                 print(f"RFC {rfc} is too long or short, skipping")
                 rfc = None
 
             if rfc and len(rfc) == 12:
-                # TODO: insert persona moral
-                print(f"RFC ({nombre}): {rfc}  is a moral person, skipping")
-                continue
+                person_type = 'juridical'
+
+            n = nombre.upper().strip().replace('.', '')
+            if n.endswith(' SA DE CV') or n.endswith(' SR DE RL') or n.endswith(' RL DE CV') or n.endswith(' INC') or n.endswith(' CO.'):
+                person_type = 'juridical'
 
             with transaction.atomic():
                 with connection.cursor() as cursor:
@@ -39,23 +53,33 @@ class Command(BaseCommand):
 
                 person = BlacklistPerson.objects.create(
                     blacklist=blacklist,
-                    type='natural',
-                    attributes={},
+                    type=person_type,
+                    attributes=attributes,
                     #official_registration_number=''
                 )
 
-                BlacklistNaturalPersonDetails.objects.create(
-                    blacklist_person=person,
-                    rfc=rfc,
-                    curp=curp,
-                    full_name=nombre,
-                )
+                if person_type == 'natural':
+                    BlacklistNaturalPersonDetails.objects.create(
+                        blacklist_person=person,
+                        rfc=rfc,
+                        curp=curp,
+                        full_name=nombre,
+                    )
+                else:
+                    BlacklistJuridicalPersonDetails.objects.create(
+                        blacklist_person=person,
+                        rfc=rfc,
+                        legal_name=nombre,
+                    )
 
             print(f'Done {i}: {nombre}')
 
     def load_blacklist_format_2(self, reader, blacklist, options):
         for i, row in enumerate(reader):
             ID, Relative_ID, Tite, First_Name, Last_Name, full_name, other_names, Alternative_Script, Case, entity_type, date_of_publication, no_longer_on_list, DOB, POB, additional_information, country, Category, Address, Address_Country, Passport_Nr, name_of_the_list, date_of_information, Authority = row
+
+            if name_of_the_list not in ('Condemnatory enforceable sentence by the commission of a tax offence (Article 69 of the Tax Code of the Federation)', 'List of taxpayers (Article 69-B of the Tax Code of the Federation)'):
+                continue
 
             rfc = None
             if additional_information and additional_information.startswith("RFC: "):
@@ -132,8 +156,10 @@ class Command(BaseCommand):
                 print(Date_Not_In_Charge_Since)
 
     def load_blacklist_format_4(self, reader, blacklist, options):
-        lists = {}
         for i, row in enumerate(reader):
+            if i % 1000 == 0:
+                print(f'Processing {i} row')
+
             ID, title, first_name, last_name, full_name, other_names, alternative_script, DOB, POB, additional_information, type_SDN_or_entity, Address, passsport_nr, Name_of_the_List, type_of_list, date_of_publication_of_the_list, authority, whitelist = row
 
             if type_of_list not in ('Mexico List', 'OFAC List', 'OFAC SDN Lis', 'UN List', 'European Union Lists', 'FinCEN List'):
