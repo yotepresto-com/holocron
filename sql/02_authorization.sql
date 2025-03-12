@@ -71,6 +71,31 @@ END;
 $$
 LANGUAGE plpgsql;
 
+create or replace function check_permission()
+returns trigger
+as $$
+declare
+    _user_id integer;
+    _permission_type permission_type;
+begin
+    _user_id := current_setting('app.current_user_id')::integer;
+    _permission_type := TG_ARGV[0]::permission_type;
+
+    if not has_permission(_user_id, _permission_type) then
+        raise exception 'User % does not have permission %', _user_id, _permission_type;
+    end if;
+    return new;
+end;
+$$ language plpgsql;
+
+
+create trigger check_permission_create_user
+before insert on auth_user
+for each row
+when (new.is_superuser is false)
+execute function check_permission('create_user');
+-- TODO: add the other permissions
+
 -- -- Add Audit Triggers
 -- SELECT add_audit_triggers(
 --     ARRAY[
