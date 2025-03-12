@@ -157,7 +157,7 @@ class Command(BaseCommand):
 
     def load_blacklist_format_4(self, reader, blacklist, options):
         for i, row in enumerate(reader):
-            if i % 1000 == 0:
+            if i % 100 == 0:
                 print(f'Processing {i} row')
 
             ID, title, first_name, last_name, full_name, other_names, alternative_script, DOB, POB, additional_information, type_SDN_or_entity, Address, passsport_nr, Name_of_the_List, type_of_list, date_of_publication_of_the_list, authority, whitelist = row

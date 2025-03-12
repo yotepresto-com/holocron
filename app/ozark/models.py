@@ -48,7 +48,7 @@ class BlacklistJuridicalPersonDetails(models.Model):
     rfc = models.CharField(max_length=13, blank=True, null=True)
     legal_name = models.TextField()
     incorporation_date = models.DateField(blank=True, null=True)
-    created_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f'{self.legal_name} ({self.rfc})'
