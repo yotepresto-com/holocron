@@ -603,10 +603,10 @@ BEGIN
 --               NEW.full_name),
       CURRENT_DATE
     FROM
-      natural_person_details npd
-    WHERE
+      natural_person_details npd;
+    -- WHERE
       -- TODO: change the hardcoded 0.9 to a config
-      compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9;
+    -- compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9;
 --       levenshtein (npd.full_name, NEW.full_name) < min_distance; TODO: Add a config flag to toggle this on/off
 
   RETURN NEW;
@@ -620,6 +620,25 @@ CREATE TRIGGER blacklist_natural_person_details_tgr
   AFTER INSERT ON blacklist_natural_person_details
   FOR EACH ROW
   EXECUTE FUNCTION blacklist_natural_person_details_tgr_fn ();
+
+
+create or replace function  blacklist_search_match_tgr_fn()
+returns trigger
+as $$
+begin
+    -- TODO: change the hardcoded 0.9 to a config
+    if new.match_score >= 0.9 then
+        insert into blacklist_alert (blacklist_search_id, date)
+        values (new.id, new.search_date)
+    end if;
+end;
+$$ language plpgsql;
+
+drop trigger if exists blacklist_search_match_tgr on blacklist_search;
+create trigger blacklist_search_match_tgr
+    after insert on blacklist_search
+    for each row
+    execute function blacklist_search_match_tgr_fn();
 
 
 -- Juridical person TRIGGERS

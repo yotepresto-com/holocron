@@ -108,10 +108,10 @@ BEGIN
 	json_build_object('rfc_match', bl_npd.rfc = NEW.rfc, 'curp_match', bl_npd.curp = NEW.curp,
 	  'name_match', TRUE, 'levenshtein_distance', levenshtein (bl_npd.calculated_full_name, NEW.full_name))
       FROM
-        blacklist_natural_person_details bl_npd
-      WHERE
+        blacklist_natural_person_details bl_npd;
+      --WHERE
           -- TODO: change the hardcoded 0.9 to a config
-          compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, bl_npd.calculated_full_name) >= 0.9;
+      --    compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, bl_npd.calculated_full_name) >= 0.9;
         --levenshtein (bl_npd.calculated_full_name, NEW.full_name) < min_distance;
     END IF;
   END IF;
