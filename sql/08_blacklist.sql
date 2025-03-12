@@ -31,6 +31,7 @@ CREATE TRIGGER prevent_blacklist_person_deletion
   FOR EACH ROW
   EXECUTE PROCEDURE prevent_deletion ();
 
+
 -- Natural Person Blacklist
 CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
   id SERIAL PRIMARY KEY,
@@ -43,7 +44,7 @@ CREATE TABLE IF NOT EXISTS blacklist_natural_person_details (
   full_name TEXT,
   date_of_birth DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  calculated_full_name TEXT generated always as (upper(coalesce(full_name, name || ' ' || first_last_name || coalesce(' ' || second_last_name, '')))) stored,
+  calculated_full_name TEXT generated always as (replace(upper(coalesce(full_name, name || ' ' || first_last_name || coalesce(' ' || second_last_name, ''))), '  ', ' ') ) stored,
   CONSTRAINT check_fullname_either_or
     CHECK (
       (full_name IS NOT NULL AND name IS NULL AND first_last_name IS NULL and second_last_name IS NULL)
