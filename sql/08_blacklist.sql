@@ -84,38 +84,55 @@ DECLARE
     lev_distance  INT;
     max_len       INT;
     lev_ratio     DOUBLE PRECISION;
-    phonetic_score DOUBLE PRECISION;
 BEGIN
     -- If the tokens match exactly, return 1.0.
     IF token1 = token2 THEN
        RETURN 1.0;
     END IF;
 
-    -- Abbreviation rule:
-    -- If one token is very short (length <= 2) and its first character
-    -- equals the first character of the other token, return 0.95.
-    IF (char_length(token1) <= 2 AND token1 not in ('de') AND substring(token2,1,char_length(token1)) = substring(token1,1,char_length(token1)))
-       OR (char_length(token2) <= 2 AND token2 not in ('de') AND substring(token1,1,char_length(token1)) = substring(token2,1,char_length(token1))) THEN
-       RETURN 0.95;
-    END IF;
+    -- Abbreviation rule: Jesús, José y María
+    if token1 in ('MA', 'M') and token2 in ('MARIA', 'MARIO') then
+        return 0.95;
+    end if;
 
-    -- Phonetic check
-    --IF soundex(token1) = soundex(token2) and daitch_mokotoff(token1) = daitch_mokotoff(token2) THEN
-    --   phonetic_score := 0.95;
-    --ELSE
-    --   phonetic_score := 0.0;
-    --END IF;
+    if token2 in ('MA', 'M') and token1 in ('MARIA', 'MARIO') then
+        return 0.95;
+    end if;
+
+    if token1 = 'J' and token2 in ('JESUS', 'JOSE') then
+        return 0.95;
+    end if;
+
+    if token2 = 'J' and token1 in ('JESUS', 'JOSE') then
+        return 0.95;
+    end if;
+
+    if token1 = 'JE' and token2 = 'JESUS' then
+        return 0.95;
+    end if;
+
+    if token2 = 'JE' and token1 = 'JESUS' then
+        return 0.95;
+    end if;
+
+    if token1 = 'JO' and token2 = 'JOSE' then
+        return 0.95;
+    end if;
+
+    if token2 = 'JO' and token1 = 'JOSE' then
+        return 0.95;
+    end if;
 
     -- Compute Levenshtein similarity ratio.
     max_len := GREATEST(char_length(token1), char_length(token2));
     IF max_len = 0 THEN
-       lev_ratio := 1.0;
+       lev_ratio := 0;
     ELSE
        lev_distance := levenshtein(token1, token2);
        lev_ratio := (max_len - lev_distance)::DOUBLE PRECISION / max_len;
     END IF;
 
-    RETURN GREATEST(lev_ratio, phonetic_score);
+    RETURN lev_ratio;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -325,192 +342,6 @@ begin
     end if;
 end;
 $$ language plpgsql immutable parallel safe;
-
-
-CREATE OR REPLACE FUNCTION compute_match_score_OLD(
-    query_given_names    TEXT,
-    query_first_surname  TEXT,
-    query_second_surname TEXT,
-    blacklist_name       TEXT
-) RETURNS DOUBLE PRECISION
-AS
-$$
-DECLARE
-    -- Normalized strings (using unaccent, lower, and removing punctuation)
-    norm_query_given_names    TEXT := regexp_replace(unaccent(lower(query_given_names)), '[[:punct:]]', '', 'g');
-    norm_query_first_surname  TEXT := regexp_replace(unaccent(lower(query_first_surname)), '[[:punct:]]', '', 'g');
-    norm_query_second_surname TEXT := regexp_replace(unaccent(lower(query_second_surname)), '[[:punct:]]', '', 'g');
-    norm_blacklist            TEXT := regexp_replace(unaccent(lower(blacklist_name)), '[[:punct:]]', '', 'g');
-
-    -- Token arrays
-    query_given_tokens TEXT[] := string_to_array(norm_query_given_names, ' ');
-    query_surname_tokens TEXT[] := ARRAY[]::TEXT[];
-    blacklist_tokens   TEXT[] := string_to_array(norm_blacklist, ' ');
-
-    token_count        INT := COALESCE(array_length(blacklist_tokens,1), 0);
-    used_indices       BOOLEAN[];  -- An array of booleans to mark which blacklist tokens have been "used"
-
-    i INT;
-    j INT;
-    best_score DOUBLE PRECISION;
-    best_index INT;
-    current_score DOUBLE PRECISION;
-    surname_scores DOUBLE PRECISION[] := '{}';
-    surname_score DOUBLE PRECISION;
-
-    -- Variables for given names matching:
-    best_given_score DOUBLE PRECISION := 0;
-    best_given_name_position INT := NULL;
-    penalty DOUBLE PRECISION := 0;
-
-    overall_score DOUBLE PRECISION;
-    names_matched_count INT := 0;
-
-    last_name_start_index INT := 1;
-    surname_best_indexes INT[] := '{}';
-    best_given_name_position_blacklist INT;
-BEGIN
-    if upper(blacklist_name) like 'REP. LEGAL DE LA SUCESION%' then
-        return 0.0;
-    end if;
-
-    -- Build query surname tokens array (ignore empty strings)
-    IF length(trim(norm_query_first_surname)) > 0 THEN
-       query_surname_tokens := query_surname_tokens || norm_query_first_surname;
-    END IF;
-    IF length(trim(norm_query_second_surname)) > 0 THEN
-       query_surname_tokens := query_surname_tokens || norm_query_second_surname;
-    END IF;
-
-    -- Initialize the used_indices array with FALSE for each blacklist token.
-    IF token_count > 0 THEN
-        used_indices := ARRAY(SELECT false FROM generate_series(1, token_count));
-    ELSE
-        used_indices := ARRAY[]::BOOLEAN[];
-    END IF;
-
-    --raise notice 'query_given_names: %', query_given_names; --DELETE
-    --raise notice 'blacklist_tokens: %', blacklist_tokens; --DELETE
-
-    -----------------------------
-    -- STEP 1: Surname Matching
-    -----------------------------
-    -- For each query surname token, find the best matching blacklist token (not already used).
-    FOR i IN 1 .. COALESCE(array_length(query_surname_tokens,1),0) LOOP
-         best_score := 0;
-         best_index := NULL;
-         --raise notice 'last_name_start_index: %, %', last_name_start_index, query_surname_tokens[i]; --DELETE
-         FOR j IN last_name_start_index .. token_count LOOP
-             IF used_indices[j] = false THEN
-                current_score := fuzzy_match_score(query_surname_tokens[i], blacklist_tokens[j]);
-                --raise notice 'fuzzy_match_score: %, %: %', query_surname_tokens[i], blacklist_tokens[j], current_score; --DELETE
-                if current_score >= 0.9 then
-                    last_name_start_index := j + 1;
-                end if;
-                IF current_score > best_score THEN
-                   best_score := current_score;
-                   best_index := j;
-                END IF;
-             END IF;
-         END LOOP;
-         surname_scores := surname_scores || best_score;
-         IF best_index IS NOT NULL THEN
-             used_indices[best_index] := true;
-             surname_best_indexes := surname_best_indexes || best_index;
-         END IF;
-    END LOOP;
-
-    --raise notice 'query_surname_tokens: %', query_surname_tokens; --DELETE
-    --raise notice 'surname_scores: %', surname_scores; --DELETE
-
-    surname_score := 0;
-    FOR i IN 1 .. array_length(surname_scores,1) LOOP
-        surname_score := surname_score + surname_scores[i];
-    END LOOP;
-    surname_score := surname_score / array_length(surname_scores,1);
-
-    -- Penalize the score if the order of the matches is not right
-    for i in 1 .. coalesce(array_length(surname_best_indexes, 1) - 1, 0) loop
-        if surname_best_indexes[i] > surname_best_indexes[i+1] then
-            surname_score := surname_score * 0.9;
-        end if;
-    end loop;
-    --raise notice 'surname_best_indexes: %', surname_best_indexes; --DELETE
-
-    --raise notice 'surname_scores: %', surname_scores; --DELETE
-    --raise notice 'surname_score: %', surname_score; --DELETE
-
-    -----------------------------
-    -- STEP 2: Given Names Matching
-    -----------------------------
-    -- Use any remaining blacklist tokens (those not used for surname matching).
-    FOR i IN 1 .. COALESCE(array_length(query_given_tokens,1),0) LOOP
-        --raise notice 'used_indices: %', used_indices; --DELETE
-         FOR j IN 1 .. token_count LOOP
-             IF used_indices[j] = false THEN
-
-                current_score := fuzzy_match_score(query_given_tokens[i], blacklist_tokens[j]);
-                --raise notice '%, %. %', query_given_tokens[i], blacklist_tokens[j], current_score; --DELETE
-
-                -- for short given names, we allow a lower score to match
-                if current_score >= 0.75 and current_score < 0.9 and length(query_given_tokens[i]) < 5 then
-                    current_score := 0.9;
-                end if;
-
-                if current_score >= 0.8 then
-                    names_matched_count := names_matched_count + 1;
-                end if;
-                IF current_score > best_given_score THEN
-                   best_given_score := current_score;
-                   best_given_name_position := i;  -- save the position (1 = primary given name)
-                   if current_score >= 0.9 then
-                       used_indices[j] := true;
-                       best_given_name_position_blacklist := j;
-                   end if;
-                END IF;
-             END IF;
-         END LOOP;
-    END LOOP;
-    --raise notice 'used_indices: %', used_indices; --DELETE
-    --raise notice 'best_given_name_position_blacklist: %', best_given_name_position_blacklist; --DELETE
-    --raise notice 'best_given_score: %', best_given_score; --DELETE
-    --raise notice 'best_given_name_position: %', best_given_name_position; --DELETE
-
-    -- If the best given–name match did not come from the first (primary) token, apply a penalty.
-    IF best_given_name_position IS NOT NULL AND best_given_name_position > 1 THEN
-         penalty := 0.1;
-    ELSE
-         penalty := 0;
-    END IF;
-
-    -- penalize if the firt name matches the second name
-    if best_given_name_position = 1 and best_given_name_position_blacklist = 2 and used_indices[1] = false then
-        penalty := penalty + 0.1;
-    end if;
-
-    best_given_score := GREATEST(0, best_given_score - penalty);
-    --raise notice 'best_given_score2: %', best_given_score; --DELETE
-
-    -- If not all given names matched, reduce the score.
-    if names_matched_count < COALESCE(array_length(query_given_tokens,1),0) then
-        best_given_score := best_given_score * 0.8;
-    end if;
-    --raise notice 'best_given_score3: %', best_given_score; --DELETE
-
-    -----------------------------
-    -- STEP 3: Combine Scores
-    -----------------------------
-    if array_length(query_surname_tokens, 1) > 1 and array_length(query_given_tokens, 1) = 1 then
-        overall_score := 0.4 * best_given_score + 0.6 * surname_score;
-    else
-        overall_score := 0.5 * best_given_score + 0.5 * surname_score;
-    end if;
-
-    -- Scale to a 0-100 range and round.
-    RETURN overall_score;
-END;
-$$ LANGUAGE plpgsql
-IMMUTABLE;
 
 
 CREATE OR REPLACE FUNCTION blacklist_natural_person_match_fn(
