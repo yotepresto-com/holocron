@@ -16,6 +16,31 @@ class Command(BaseCommand):
         parser.add_argument("--separator", type=str, default=",")
         parser.add_argument("--format", type=str, default="1")
 
+    def load_blacklist_person(self, user_id, blacklist, person_type, attributes, rfc, curp, nombre):
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute("select set_current_user_id(%s)", [user_id, ])
+
+            person = BlacklistPerson.objects.create(
+                blacklist=blacklist,
+                type=person_type,
+                attributes=attributes,
+                # official_registration_number=''
+            )
+
+            if person_type == 'natural':
+                BlacklistNaturalPersonDetails.objects.create(
+                    blacklist_person=person,
+                    rfc=rfc,
+                    curp=curp,
+                    full_name=nombre,
+                )
+            else:
+                BlacklistJuridicalPersonDetails.objects.create(
+                    blacklist_person=person,
+                    rfc=rfc,
+                    legal_name=nombre,
+                )
 
     def load_blacklist_format_1(self, reader, blacklist, options):
         for i, row in enumerate(reader):
@@ -23,6 +48,7 @@ class Command(BaseCommand):
 
             curp = curp.strip() or None
             rfc = rfc.strip() or None
+            rfcs = [None]
             person_type = 'natural'
 
             attributes = {
@@ -36,43 +62,26 @@ class Command(BaseCommand):
                 attributes['acciones'] = acciones
 
 
-            if rfc and (len(rfc) > 13 or len(rfc) < 9):
-                print(f"RFC {rfc} is too long or short, skipping")
-                rfc = None
-
-            if rfc and len(rfc) == 12:
-                person_type = 'juridical'
+            if rfc:
+                if ' o ' not in rfc and (len(rfc) > 13 or len(rfc) < 9):
+                    print(f"RFC {rfc} is too long or short, skipping")
+                    rfcs = [None]
+                elif rfc and ' o ' in rfc:
+                   rfcs = rfc.split(' o ')
+                else:
+                    rfcs = [rfc]
 
             n = nombre.upper().strip().replace('.', '')
             if n.endswith(' SA DE CV') or n.endswith(' SR DE RL') or n.endswith(' RL DE CV') or n.endswith(' INC') or n.endswith(' CO.'):
                 person_type = 'juridical'
 
-            with transaction.atomic():
-                with connection.cursor() as cursor:
-                    cursor.execute("select set_current_user_id(%s)", [options["user_id"], ])
+            for rfc in rfcs:
+                if rfc and len(rfc) == 12:
+                    person_type = 'juridical'
 
-                person = BlacklistPerson.objects.create(
-                    blacklist=blacklist,
-                    type=person_type,
-                    attributes=attributes,
-                    #official_registration_number=''
-                )
+                self.load_blacklist_person(options["user_id"], blacklist, person_type, attributes, rfc, curp, nombre)
 
-                if person_type == 'natural':
-                    BlacklistNaturalPersonDetails.objects.create(
-                        blacklist_person=person,
-                        rfc=rfc,
-                        curp=curp,
-                        full_name=nombre,
-                    )
-                else:
-                    BlacklistJuridicalPersonDetails.objects.create(
-                        blacklist_person=person,
-                        rfc=rfc,
-                        legal_name=nombre,
-                    )
-
-            print(f'Done {i}: {nombre}')
+                print(f'Done {i}: {nombre} - {person_type}: {rfc}')
 
     def load_blacklist_format_2(self, reader, blacklist, options):
         for i, row in enumerate(reader):
