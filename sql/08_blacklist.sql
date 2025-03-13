@@ -622,25 +622,6 @@ CREATE TRIGGER blacklist_natural_person_details_tgr
   EXECUTE FUNCTION blacklist_natural_person_details_tgr_fn ();
 
 
-create or replace function  blacklist_search_match_tgr_fn()
-returns trigger
-as $$
-begin
-    -- TODO: change the hardcoded 0.9 to a config
-    if new.match_score >= 0.9 then
-        insert into blacklist_alert (blacklist_search_id, date)
-        values (new.id, new.search_date)
-    end if;
-end;
-$$ language plpgsql;
-
-drop trigger if exists blacklist_search_match_tgr on blacklist_search;
-create trigger blacklist_search_match_tgr
-    after insert on blacklist_search
-    for each row
-    execute function blacklist_search_match_tgr_fn();
-
-
 -- Juridical person TRIGGERS
 DROP TRIGGER IF EXISTS prevent_blacklist_juridical_person_updates ON blacklist_juridical_person_details;
 

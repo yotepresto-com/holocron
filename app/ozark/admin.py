@@ -1,3 +1,4 @@
+import datetime
 from django.contrib import admin
 from django.db import connection
 
@@ -48,7 +49,13 @@ class BlacklistSearchAdmin(GenericAdmin):
     def blacklist(self, obj):
         return obj.blacklist_person.blacklist.name
 
-    list_display = ('id', 'person', 'blacklist_person', 'match', 'match_score', 'blacklist', 'search_date', 'created_at', 'match_details')
+    def diff_birth_date(self, obj):
+        if obj.blacklist_person.natural_person_details.rfc:
+            bl_date = datetime.datetime.strptime(obj.blacklist_person.natural_person_details.rfc[4:10], '%y%m%d').date()
+            person_date = datetime.datetime.strptime(obj.person.natural_person_details.curp[4:10], '%y%m%d').date()
+            return abs((person_date - bl_date).days)
+
+    list_display = ('id', 'person', 'blacklist_person', 'match', 'match_score', 'diff_birth_date', 'blacklist', 'search_date', 'created_at', 'match_details')
     autocomplete_fields = ['person', 'blacklist_person']
 
 

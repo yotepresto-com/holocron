@@ -78,6 +78,9 @@ class Command(BaseCommand):
         for i, row in enumerate(reader):
             ID, Relative_ID, Tite, First_Name, Last_Name, full_name, other_names, Alternative_Script, Case, entity_type, date_of_publication, no_longer_on_list, DOB, POB, additional_information, country, Category, Address, Address_Country, Passport_Nr, name_of_the_list, date_of_information, Authority = row
 
+            if i % 100 == 0:
+                print(f'Processing {i} row')
+
             if name_of_the_list not in ('Condemnatory enforceable sentence by the commission of a tax offence (Article 69 of the Tax Code of the Federation)', 'List of taxpayers (Article 69-B of the Tax Code of the Federation)'):
                 continue
 
@@ -136,7 +139,7 @@ class Command(BaseCommand):
                         #incorporation_date=
                     )
 
-            print(f'Done {i}: {full_name}')
+            #print(f'Done {i}: {full_name}')
 
             if other_names:
                 pass
