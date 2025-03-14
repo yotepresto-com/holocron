@@ -75,9 +75,13 @@ class Command(BaseCommand):
             if n.endswith(' SA DE CV') or n.endswith(' SR DE RL') or n.endswith(' RL DE CV') or n.endswith(' INC') or n.endswith(' CO.'):
                 person_type = 'juridical'
 
-            for rfc in rfcs:
+            for i, rfc in enumerate(rfcs):
                 if rfc and len(rfc) == 12:
                     person_type = 'juridical'
+
+                if i > 0 and len(rfc) > 13 or len(rfc) < 9:
+                    print(f"RFC {rfc} is too long or short, skipping row")
+                    continue
 
                 self.load_blacklist_person(options["user_id"], blacklist, person_type, attributes, rfc, curp, nombre)
 
