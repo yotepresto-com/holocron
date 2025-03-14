@@ -4,7 +4,7 @@ import sys
 from django.db import transaction, connection
 from django.core.management.base import BaseCommand, CommandError
 
-from ozark.models import NaturalPersonDetails, Person
+from ozark.models import NaturalPersonDetails, Person, JuridicalPersonDetails
 
 
 class Command(BaseCommand):
@@ -25,8 +25,9 @@ class Command(BaseCommand):
         transaction.set_autocommit(False)
 
         for i, row in enumerate(reader):
-            name,first_last_name,second_last_name,curp,rfc = row
+            name, first_last_name, second_last_name, curp, rfc, _person_type = row
 
+            person_type = 'natural' if _person_type == 'física' else 'juridical'
             curp = curp.strip() or None
             rfc = rfc.strip() or None
 
@@ -38,22 +39,28 @@ class Command(BaseCommand):
                 print(f"CURP {curp} is too long or short, skipping")
                 continue
 
-
             person = Person.objects.create(
-                type='natural',
+                type=person_type,
                 active=True
             )
-            NaturalPersonDetails.objects.create(
-                person=person,
-                rfc=rfc,
-                curp=curp,
-                name=name,
-                first_last_name=first_last_name,
-                second_last_name=second_last_name,
-                # date_of_birth=...
-            )
+            if person_type == 'natural':
+                NaturalPersonDetails.objects.create(
+                    person=person,
+                    rfc=rfc,
+                    curp=curp,
+                    name=name,
+                    first_last_name=first_last_name,
+                    second_last_name=second_last_name,
+                    # date_of_birth=...
+                )
+            else:
+                JuridicalPersonDetails.objects.create(
+                    person=person,
+                    rfc=rfc,
+                    legal_name=name
+                )
 
-            if i % 100 == 0:
+            if i % 1000 == 0:
                 transaction.commit()
                 print(f"Processing {i+1} row")
 
