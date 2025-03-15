@@ -77,8 +77,10 @@ BEGIN
       json_build_object('rfc_match', bl_npd.rfc = NEW.rfc, 'curp_match', bl_npd.curp = NEW.curp,
 	'name_match', levenshtein (bl_npd.full_name, NEW.full_name) < min_distance, 'levenshtein_distance',
 	levenshtein (bl_npd.full_name, NEW.full_name))
-    FROM
-      blacklist_natural_person_details bl_npd;
+    FROM blacklist_natural_person_details bl_npd
+        inner join blacklist_person bl_p on bl_p.id = bl_npd.blacklist_person_id
+    where bl_p.deleted_at is null
+    ;
   ELSE
     INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
     SELECT
@@ -90,11 +92,15 @@ BEGIN
       json_build_object('rfc_match', bl_npd.rfc = NEW.rfc, 'curp_match', bl_npd.curp = NEW.curp,
 	'name_match', bl_npd.calculated_full_name = NEW.full_name)
     FROM
-      blacklist_natural_person_details bl_npd
+        blacklist_natural_person_details bl_npd
+        inner join blacklist_person bl_p on bl_p.id = bl_npd.blacklist_person_id
     WHERE
-      bl_npd.calculated_full_name = NEW.full_name
-      OR bl_npd.curp = NEW.curp
-      OR bl_npd.rfc = NEW.rfc;
+        bl_p.deleted_at is null
+        and (
+            bl_npd.calculated_full_name = NEW.full_name
+            OR bl_npd.curp = NEW.curp
+            OR bl_npd.rfc = NEW.rfc
+        );
     GET DIAGNOSTICS _row_count := ROW_COUNT;
     IF _row_count = 0 THEN
       INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
@@ -107,12 +113,12 @@ BEGIN
         CURRENT_DATE,
 	json_build_object('rfc_match', bl_npd.rfc = NEW.rfc, 'curp_match', bl_npd.curp = NEW.curp,
 	  'name_match', TRUE, 'levenshtein_distance', levenshtein (bl_npd.calculated_full_name, NEW.full_name))
-      FROM
-        blacklist_natural_person_details bl_npd;
-      --WHERE
-          -- TODO: change the hardcoded 0.9 to a config
-      --    compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, bl_npd.calculated_full_name) >= 0.9;
-        --levenshtein (bl_npd.calculated_full_name, NEW.full_name) < min_distance;
+      FROM blacklist_natural_person_details bl_npd
+        inner join blacklist_person bl_p on bl_p.id = bl_npd.blacklist_person_id
+      where bl_p.deleted_at is null
+        -- TODO: change the hardcoded 0.9 to a config
+        -- and compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, bl_npd.calculated_full_name) >= 0.9;
+      ;
     END IF;
   END IF;
   RETURN NEW;
@@ -136,6 +142,9 @@ CREATE TABLE IF NOT EXISTS juridical_person_details (
   PRIMARY KEY (person_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_rfc_juridical_details ON juridical_person_details (rfc);
+
+
 DROP TRIGGER IF EXISTS prevent_juridical_person_updates ON juridical_person_details;
 
 CREATE TRIGGER prevent_juridical_person_updates
@@ -143,4 +152,40 @@ CREATE TRIGGER prevent_juridical_person_updates
   FOR EACH ROW
   EXECUTE FUNCTION prevent_updates ();
 
-CREATE INDEX IF NOT EXISTS idx_rfc_juridical_details ON juridical_person_details (rfc);
+
+CREATE OR REPLACE FUNCTION juridical_person_details_tgr_fn ()
+RETURNS TRIGGER
+AS $$
+DECLARE
+    _row_count INTEGER;
+    min_distance INTEGER;
+    save_all_comparison_results BOOLEAN;
+BEGIN
+    min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
+    save_all_comparison_results := (SELECT value::BOOLEAN FROM config WHERE name = 'save_all_comparison_results');
+
+    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
+    SELECT
+        NEW.person_id,
+        bl_jpd.blacklist_person_id,
+        blacklist_juridical_person_match_fn(NEW.legal_name, bl_jpd.legal_name) >= 0.9 OR bl_jpd.rfc = NEW.rfc,
+    blacklist_juridical_person_match_fn(NEW.legal_name, bl_jpd.legal_name),
+        CURRENT_DATE,
+        json_build_object('rfc_match', bl_jpd.rfc = NEW.rfc)
+    FROM blacklist_juridical_person_details bl_jpd
+        inner join blacklist_person bl_p on bl_p.id = bl_jpd.blacklist_person_id
+    where bl_p.deleted_at is null
+    -- TODO: use save_all_comparison_results config
+    ;
+
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS juridical_person_details_tgr ON juridical_person_details;
+
+CREATE TRIGGER juridical_person_details_tgr
+  AFTER INSERT ON juridical_person_details
+  FOR EACH ROW
+  EXECUTE FUNCTION juridical_person_details_tgr_fn ();

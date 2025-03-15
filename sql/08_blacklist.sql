@@ -344,70 +344,42 @@ end;
 $$ language plpgsql immutable parallel safe;
 
 
-CREATE OR REPLACE FUNCTION blacklist_natural_person_match_fn(
-    _person_name            TEXT,
-    _person_first_last_name TEXT,
-    _person_second_last_name TEXT,
-    _blacklist_name         TEXT,
-    _blacklist_last_name    TEXT,
-    _blacklist_full_name    TEXT
+create or replace function blacklist_juridical_person_match_fn(
+    legal_name TEXT,
+    blacklist_legal_name TEXT
 )
-RETURNS DOUBLE PRECISION
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    -- Combined name for the 'person' side
-    person_full_name    TEXT;
-    -- Combined name for the 'blacklist' side
-    blacklist_full_name TEXT;
-    distance            INTEGER;
-    max_len             INTEGER;
-BEGIN
-    /*
-      1) Combine person's parts:
-         - If _person_name is not null, use it.
-         - Then add first last name (if present).
-         - Then add second last name (if present).
-         - This effectively is "first_name + ' ' + first_last_name + ' ' + second_last_name"
-         - We trim extra spaces at the end just in case.
-    */
-    person_full_name := COALESCE(_person_name, '')
-                       || CASE WHEN _person_first_last_name IS NOT NULL THEN ' ' || _person_first_last_name ELSE '' END
-                       || CASE WHEN _person_second_last_name IS NOT NULL THEN ' ' || _person_second_last_name ELSE '' END;
+returns double precision
+as $$
+declare
+    max_len int;
+    distance int;
+begin
+    legal_name := regexp_replace(unaccent(upper(legal_name)), '[[:punct:]]', '', 'g');
+    blacklist_legal_name := regexp_replace(unaccent(upper(blacklist_legal_name)), '[[:punct:]]', '', 'g');
 
-    person_full_name := btrim(person_full_name);
-    person_full_name := unaccent(person_full_name);
+    legal_name := replace(legal_name, ' SA DE CV', '');
+    legal_name := replace(legal_name, ' SR DE RL', '');
+    legal_name := replace(legal_name, ' RL DE CV', '');
 
-    /*
-      2) Combine blacklist parts:
-         - Use _blacklist_full_name if present,
-           otherwise "blacklist_name + ' ' + blacklist_last_name"
-         - Also trim extraneous spaces.
-    */
-    blacklist_full_name := COALESCE(
-        btrim(_blacklist_full_name),
-        btrim(_blacklist_name || ' ' || COALESCE(_blacklist_last_name, ''))
-    );
-    blacklist_full_name := unaccent(blacklist_full_name);
+    blacklist_legal_name := replace(blacklist_legal_name, ' SA DE CV', '');
+    blacklist_legal_name := replace(blacklist_legal_name, ' SR DE RL', '');
+    blacklist_legal_name := replace(blacklist_legal_name, ' RL DE CV', '');
 
-    -- 3) Check if they match exactly:
-    IF person_full_name = blacklist_full_name THEN
-        RETURN 1.0;
-    END IF;
 
-    -- 4) If not exact, compute Levenshtein-based similarity:
-    distance := levenshtein(person_full_name, blacklist_full_name);
-    max_len  := GREATEST(length(person_full_name), length(blacklist_full_name));
+    if legal_name = blacklist_legal_name then
+        return 1.0;
+    end if;
 
-    -- Avoid division by zero; if both strings are empty, similarity is 0.
+    max_len := GREATEST(length(legal_name), length(blacklist_legal_name));
+
     IF max_len = 0 THEN
         RETURN 0.0;
     END IF;
 
-    RETURN (1.0 * (max_len - distance)) / max_len;
-END;
-$$;
-
+    distance := levenshtein(legal_name, blacklist_legal_name);
+    return (1.0 * (max_len - distance)) / max_len;
+end;
+$$ language plpgsql immutable parallel safe;
 
 
 CREATE OR REPLACE FUNCTION blacklist_natural_person_details_tgr_fn ()
@@ -425,21 +397,13 @@ BEGIN
       NEW.blacklist_person_id,
       TRUE,
       compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name),
---       blacklist_natural_person_match_fn(
---               npd.name,
---               npd.first_last_name,
---               npd.second_last_name,
---               NEW.name,
---               NEW.first_last_name || coalesce(' ' || NEW.second_last_name, ''),
---               NEW.full_name),
       CURRENT_DATE
-    FROM
-      natural_person_details npd;
-    -- WHERE
-      -- TODO: change the hardcoded 0.9 to a config
-    -- compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9;
---       levenshtein (npd.full_name, NEW.full_name) < min_distance; TODO: Add a config flag to toggle this on/off
-
+    FROM natural_person_details npd
+        inner join person p on p.id = npd.person_id
+    where p.deleted_at is null
+    -- TODO: change the hardcoded 0.9 to a config
+    -- and compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9
+    ;
   RETURN NEW;
 END;
 $$
@@ -460,6 +424,42 @@ CREATE TRIGGER prevent_blacklist_juridical_person_updates
   BEFORE UPDATE ON blacklist_juridical_person_details
   FOR EACH ROW
   EXECUTE FUNCTION prevent_updates ();
+
+
+CREATE OR REPLACE FUNCTION blacklist_juridical_person_details_tgr_fn ()
+  RETURNS TRIGGER
+  AS $$
+DECLARE
+  _row_count INTEGER;
+  min_distance INTEGER;
+BEGIN
+    min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
+
+    INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date)
+    SELECT
+      jpd.person_id,
+      NEW.blacklist_person_id,
+      TRUE,
+      blacklist_juridical_person_match_fn(jpd.legal_name, NEW.legal_name),
+      CURRENT_DATE
+    FROM juridical_person_details jpd
+        inner join person p on p.id = jpd.person_id
+    where p.deleted_at is null
+    -- TODO: change the hardcoded 0.9 to a config
+    --    and blacklist_juridical_person_match_fn(jpd.legal_name, NEW.legal_name) >= 0.9
+    ;
+
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS blacklist_juridical_person_details_tgr ON blacklist_juridical_person_details;
+
+CREATE TRIGGER blacklist_juridcal_person_details_tgr
+  AFTER INSERT ON blacklist_juridical_person_details
+  FOR EACH ROW
+  EXECUTE FUNCTION blacklist_juridical_person_details_tgr_fn ();
 
 -- Add Audit TRIGGERS
 SELECT
