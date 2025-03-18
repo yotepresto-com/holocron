@@ -128,6 +128,11 @@ before insert on role_permission
 for each row
 execute function check_permission('assign_permission');
 
+create trigger check_permission_delete_role_permission
+before delete on role_permission
+for each row
+execute function check_permission('remove_permission');
+
 -- TODO: add the other permissions
 
 -- -- Add Audit Triggers
