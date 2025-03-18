@@ -214,6 +214,13 @@ class GroupViewSet(DbAuthenticatedViewSet):
     queryset = AuthGroup.objects.all()
     serializer_class = GroupSerializer
 
+    def list(self, request):
+        permission = 'read_role'
+        if not self.has_permission(self.request.user, permission):
+            return Response({'permission': permission}, status=403)
+
+        return super().list(request)
+
     def create(self, request):
         with transaction.atomic():
             self.authenticate(request)
