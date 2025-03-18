@@ -95,6 +95,12 @@ for each row
 when (new.is_superuser is false)
 execute function check_permission('create_user');
 
+create trigger check_permission_delete_user
+before update on auth_user
+for each row
+when (new.is_superuser is false and new.is_active is false and old.is_active is true)
+execute function check_permission('delete_user');
+
 create trigger check_permission_update_user
 before update on auth_user
 for each row
