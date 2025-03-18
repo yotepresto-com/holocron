@@ -22,6 +22,12 @@ class DbAuthenticatedViewSet(viewsets.ModelViewSet):
     authentication_classes = [TokenAuthentication, ]
     permission_classes = [IsAuthenticated]
 
+    def has_permission(self, user, permission_type: str):
+        with connection.cursor() as cursor:
+            cursor.execute("select has_permission(%s, %s)", [user.id, permission_type, ])
+            res = cursor.fetchone()
+            return res[0]
+
     def authenticate(self, request):
         with connection.cursor() as cursor:
             cursor.execute("select set_current_user_id(%s)", [request.user.id, ])
@@ -175,6 +181,12 @@ class BlacklistPersonViewSet(DbAuthenticatedViewSet):
 class UserViewSet(DbAuthenticatedViewSet):
     queryset = AuthUser.objects.all()
     serializer_class = UserSerializer
+
+    def list(self, request):
+        if not self.has_permission(self.request.user, 'read_user'):
+            return Response({'permission': 'read_user'}, status=403)
+
+        return super().list(request)
 
     def create(self, request):
         with transaction.atomic():
