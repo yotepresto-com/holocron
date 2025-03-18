@@ -81,9 +81,11 @@ begin
     _user_id := current_setting('app.current_user_id')::integer;
     _permission_type := TG_ARGV[0]::permission_type;
 
+    -- TODO: check if the user is superuser
     if not has_permission(_user_id, _permission_type) then
         raise exception 'User % does not have permission %', _user_id, _permission_type;
     end if;
+
     return new;
 end;
 $$ language plpgsql;
@@ -98,14 +100,18 @@ execute function check_permission('create_user');
 create trigger check_permission_delete_user
 before update on auth_user
 for each row
-when (new.is_superuser is false and new.is_active is false and old.is_active is true)
+when (new.is_active is false and old.is_active is true)
 execute function check_permission('delete_user');
 
 create trigger check_permission_update_user
 before update on auth_user
 for each row
-when (new.is_superuser is false)
 execute function check_permission('update_user');
+
+create trigger check_permission_create_group
+before insert on auth_group
+for each row
+execute function check_permission('create_role');
 
 -- TODO: add the other permissions
 
