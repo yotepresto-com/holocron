@@ -32,6 +32,11 @@ class DbAuthenticatedViewSet(viewsets.ModelViewSet):
         with connection.cursor() as cursor:
             cursor.execute("select set_current_user_id(%s)", [request.user.id, ])
 
+    def update(self, request, pk=None):
+        with transaction.atomic():
+            self.authenticate(request)
+            return super().update(request, pk)
+
 
 class ConfigViewSet(DbAuthenticatedViewSet):
     queryset = Config.objects.all()
@@ -187,11 +192,6 @@ class UserViewSet(DbAuthenticatedViewSet):
             return Response({'permission': 'read_user'}, status=403)
 
         return super().list(request)
-
-    def update(self, request, pk=None):
-        with transaction.atomic():
-            self.authenticate(request)
-            return super().update(request, pk)
 
     def create(self, request):
         with transaction.atomic():

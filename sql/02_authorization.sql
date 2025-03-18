@@ -113,6 +113,11 @@ before insert on auth_group
 for each row
 execute function check_permission('create_role');
 
+create trigger check_permission_update_group
+before update on auth_group
+for each row
+execute function check_permission('update_role');
+
 -- TODO: add the other permissions
 
 -- -- Add Audit Triggers
