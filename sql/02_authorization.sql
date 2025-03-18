@@ -94,6 +94,13 @@ before insert on auth_user
 for each row
 when (new.is_superuser is false)
 execute function check_permission('create_user');
+
+create trigger check_permission_update_user
+before update on auth_user
+for each row
+when (new.is_superuser is false)
+execute function check_permission('update_user');
+
 -- TODO: add the other permissions
 
 -- -- Add Audit Triggers

@@ -188,6 +188,11 @@ class UserViewSet(DbAuthenticatedViewSet):
 
         return super().list(request)
 
+    def update(self, request, pk=None):
+        with transaction.atomic():
+            self.authenticate(request)
+            return super().update(request, pk)
+
     def create(self, request):
         with transaction.atomic():
             self.authenticate(request)
