@@ -86,7 +86,12 @@ begin
         raise exception 'User % does not have permission %', _user_id, _permission_type;
     end if;
 
-    return new;
+    if TG_OP = 'DELETE' then
+        return old;
+    else
+        return new;
+    end if;
+
 end;
 $$ language plpgsql;
 
