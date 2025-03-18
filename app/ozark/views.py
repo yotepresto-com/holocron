@@ -241,7 +241,13 @@ class RolePermissionViewSet(DbAuthenticatedViewSet):
     queryset = RolePermission.objects.all()
     serializer_class = RolePermissionSerializer
 
+
+
     def get_role_permissions(self, request, pk):
+        permission = 'read_permission'
+        if not self.has_permission(self.request.user, permission):
+            return Response({'permission': permission}, status=403)
+
         role = get_object_or_404(AuthGroup, pk=pk)
         permissions = role.role_permissions.all()
         serializer = RolePermissionSerializer(permissions, many=True)
