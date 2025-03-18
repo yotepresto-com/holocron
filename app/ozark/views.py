@@ -241,8 +241,6 @@ class RolePermissionViewSet(DbAuthenticatedViewSet):
     queryset = RolePermission.objects.all()
     serializer_class = RolePermissionSerializer
 
-
-
     def get_role_permissions(self, request, pk):
         permission = 'read_permission'
         if not self.has_permission(self.request.user, permission):

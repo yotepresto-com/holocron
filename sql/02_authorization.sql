@@ -123,6 +123,11 @@ before delete on auth_group
 for each row
 execute function check_permission('delete_role');
 
+create trigger check_permission_create_role_permission
+before insert on role_permission
+for each row
+execute function check_permission('assign_permission');
+
 -- TODO: add the other permissions
 
 -- -- Add Audit Triggers
