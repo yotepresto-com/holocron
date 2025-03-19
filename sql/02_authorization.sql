@@ -138,6 +138,11 @@ before delete on role_permission
 for each row
 execute function check_permission('remove_permission');
 
+create trigger check_permission_create_auth_user_groups
+before insert on auth_user_groups
+for each row
+execute function check_permission('assign_role');
+
 -- TODO: add the other permissions
 
 -- -- Add Audit Triggers
