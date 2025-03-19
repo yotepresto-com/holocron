@@ -3,6 +3,7 @@ from django.db import connection, transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from django.db.utils import ProgrammingError
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import LimitOffsetPagination
@@ -207,11 +208,18 @@ class UserViewSet(DbAuthenticatedViewSet):
         return super().list(request)
 
     def create(self, request):
+        permission = 'create_user'
         with transaction.atomic():
             self.authenticate(request)
             serializer = UserSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            try:
+                serializer.save()
+            except ProgrammingError as ex:
+                if f'does not have permission {permission}' in str(ex):
+                    return Response({'permission': permission}, status=403)
+                else:
+                    raise ex
             return Response(serializer.data, 201)
 
     def destroy(self, request, pk=None):
