@@ -153,6 +153,11 @@ before insert on product
 for each row
 execute function check_permission('create_product');
 
+create trigger check_permission_update_product
+before update on product
+for each row
+execute function check_permission('update_product');
+
 -- TODO: add the other permissions
 
 -- -- Add Audit Triggers
