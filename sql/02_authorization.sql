@@ -56,17 +56,19 @@ CREATE OR REPLACE FUNCTION has_permission (_user_id INTEGER, _permission permiss
   RETURNS BOOLEAN
   AS $$
 BEGIN
-  RETURN EXISTS (
-    SELECT
-      1
-    FROM
-      auth_user u
-      JOIN auth_user_groups ur ON u.id = ur.user_id
-      JOIN role_permission rp ON ur.group_id = rp.role_id
+    RETURN EXISTS (
+    SELECT 1
+    FROM auth_user u
+        left outer join auth_user_groups ur ON u.id = ur.user_id
+        left outer join role_permission rp ON ur.group_id = rp.role_id
     WHERE
-      u.id = _user_id
-      AND u.is_active = TRUE
-      AND rp.permission = _permission);
+        u.id = _user_id
+        AND u.is_active = TRUE
+      AND (
+          rp.permission = _permission
+          OR u.is_superuser IS TRUE
+      )
+    );
 END;
 $$
 LANGUAGE plpgsql;
