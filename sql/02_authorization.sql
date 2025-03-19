@@ -158,6 +158,11 @@ before update on product
 for each row
 execute function check_permission('update_product');
 
+create trigger check_permission_delete_product
+before delete on product
+for each row
+execute function check_permission('delete_product');
+
 -- TODO: add the other permissions
 
 -- -- Add Audit Triggers

@@ -101,7 +101,7 @@ class ProductViewSet(DbAuthenticatedViewSet):
             serializer.save()
             return Response(serializer.data, 201)
 
-    def delete(self, request, pk=None):
+    def destroy(self, request, pk=None):
         with transaction.atomic():
             self.authenticate(request)
             product = get_object_or_404(Product, pk=pk)
