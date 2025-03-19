@@ -148,6 +148,11 @@ before delete on auth_user_groups
 for each row
 execute function check_permission('remove_role');
 
+create trigger check_permission_create_product
+before insert on product
+for each row
+execute function check_permission('create_product');
+
 -- TODO: add the other permissions
 
 -- -- Add Audit Triggers

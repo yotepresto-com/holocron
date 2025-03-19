@@ -37,6 +37,11 @@ class DbAuthenticatedViewSet(viewsets.ModelViewSet):
             self.authenticate(request)
             return super().update(request, pk)
 
+    def create(self, request):
+        with transaction.atomic():
+            self.authenticate(request)
+            return super().create(request)
+
 
 class ConfigViewSet(DbAuthenticatedViewSet):
     queryset = Config.objects.all()
