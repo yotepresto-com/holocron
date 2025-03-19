@@ -85,6 +85,13 @@ class ProductViewSet(DbAuthenticatedViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
+    def list(self, request):
+        permission = 'read_product'
+        if not self.has_permission(self.request.user, permission):
+            return Response({'permission': permission}, status=403)
+
+        return super().list(request)
+
     def update(self, request, pk=None):
         with transaction.atomic():
             self.authenticate(request)
@@ -193,8 +200,9 @@ class UserViewSet(DbAuthenticatedViewSet):
     serializer_class = UserSerializer
 
     def list(self, request):
-        if not self.has_permission(self.request.user, 'read_user'):
-            return Response({'permission': 'read_user'}, status=403)
+        permission = 'read_user'
+        if not self.has_permission(self.request.user, permission):
+            return Response({'permission': permission}, status=403)
 
         return super().list(request)
 
