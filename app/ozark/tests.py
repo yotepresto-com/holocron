@@ -106,3 +106,26 @@ class PersonTestCase(AuthenticatedTestCase):
         self.assertEqual(response.data['results'][0]['type'], 'natural')
         self.assertEqual(response.data['results'][1]['juridical_person_details']['legal_name'], 'Ferreteria la Chida SA de CV')
         self.assertEqual(response.data['results'][1]['type'], 'juridical')
+
+    def test_create_persons(self):
+        data = {
+          "type": "natural",
+          "natural_person_details": {
+            "name": "juanito",
+            "first_last_name": "martinez"
+          }
+        }
+        response = self.client.post(self.url, format='json', data=data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(NaturalPersonDetails.objects.filter(name='juanito', first_last_name='martinez'))
+
+        data = {
+            "type": "juridical",
+            "juridical_person_details": {
+                "rfc": 'AAAAAAAAAAA2',
+                "legal_name": "Ferreteria la Chida SA de CV"
+            }
+        }
+        response = self.client.post(self.url, format='json', data=data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(JuridicalPersonDetails.objects.filter(rfc='AAAAAAAAAAA2', legal_name="Ferreteria la Chida SA de CV"))
