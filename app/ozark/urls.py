@@ -16,8 +16,8 @@ urlpatterns = [
     path('persons/', PersonViewSet.as_view({'get': 'list', 'post': 'create'}), name='persons'),
     path('persons/<int:pk>/', PersonViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'}), name='persons'),
 
-    path('blacklist/', BlacklistViewSet.as_view({'get': 'list', 'post': 'create'})),
-    path('blacklist/<int:pk>/', BlacklistViewSet.as_view({'get': 'retrieve'})),
+    path('blacklist/', BlacklistViewSet.as_view({'get': 'list', 'post': 'create'}), name='blacklists'),
+    path('blacklist/<int:pk>/', BlacklistViewSet.as_view({'get': 'retrieve'}), name='blacklists'),
 
     # Blacklisted Persons
     path('blacklisted_persons/', BlacklistPersonViewSet.as_view({'get': 'list', 'post': 'create'})),

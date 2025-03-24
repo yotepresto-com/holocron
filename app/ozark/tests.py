@@ -9,7 +9,7 @@ from django.db import connection, transaction
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import Group as AuthGroup
 
-from ozark.models import Person, NaturalPersonDetails, JuridicalPersonDetails
+from ozark.models import Person, NaturalPersonDetails, JuridicalPersonDetails, Blacklist
 
 
 class AuthenticatedTestCase(APITestCase):
@@ -129,3 +129,41 @@ class PersonTestCase(AuthenticatedTestCase):
         response = self.client.post(self.url, format='json', data=data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(JuridicalPersonDetails.objects.filter(rfc='AAAAAAAAAAA2', legal_name="Ferreteria la Chida SA de CV"))
+
+
+class BlacklistTestCase(AuthenticatedTestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.url = reverse('blacklists')
+
+        self.blacklist = Blacklist.objects.create(
+            name='blacklist1',
+            description='blacklist1 desc',
+            attributes_schema={},
+            import_configuration={},
+        )
+
+    def test_list_blacklists(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['name'], 'blacklist1')
+
+    def test_create_blacklist(self):
+        data = {
+          "name": "test bl",
+          "attributes_schema": {},
+          "import_configuration": {}
+        }
+        response = self.client.post(self.url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertTrue(Blacklist.objects.filter(name="test bl").exists())
+
+    def test_get_blacklist(self):
+        url = reverse('blacklists', kwargs={'pk':self.blacklist.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], self.blacklist.name)
