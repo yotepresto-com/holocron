@@ -111,8 +111,10 @@ class ProductViewSet(DbAuthenticatedViewSet):
 
 
 class PersonViewSet(DbAuthenticatedViewSet):
-    queryset = Person.objects.all()
+    queryset = Person.objects.filter(deleted_at__isnull=True).order_by('id')
     serializer_class = PersonSerializer
+
+    # TODO: add permissions
 
     def delete(self, request, pk=None):
         with transaction.atomic():

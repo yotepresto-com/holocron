@@ -13,8 +13,8 @@ urlpatterns = [
     path('products/<int:pk>/', ProductViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
 
     # Persons
-    path('persons/', PersonViewSet.as_view({'get': 'list', 'post': 'create'})),
-    path('persons/<int:pk>/', PersonViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'})),
+    path('persons/', PersonViewSet.as_view({'get': 'list', 'post': 'create'}), name='persons'),
+    path('persons/<int:pk>/', PersonViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'}), name='persons'),
 
     path('blacklist/', BlacklistViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('blacklist/<int:pk>/', BlacklistViewSet.as_view({'get': 'retrieve'})),
@@ -24,8 +24,8 @@ urlpatterns = [
     path('blacklisted_persons/<int:pk>/', BlacklistPersonViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'})),
 
     # users
-    path('users/', UserViewSet.as_view({'get': 'list', 'post': 'create'})),
-    path('users/<int:pk>/', UserViewSet.as_view({'get': 'retrieve', 'delete': 'destroy', 'put': 'update'})),
+    path('users/', UserViewSet.as_view({'get': 'list', 'post': 'create'}), name='users'),
+    path('users/<int:pk>/', UserViewSet.as_view({'get': 'retrieve', 'delete': 'destroy', 'put': 'update'}), name='users'),
 
     # groups
     path('roles/', GroupViewSet.as_view({'get': 'list', 'post': 'create'})),
