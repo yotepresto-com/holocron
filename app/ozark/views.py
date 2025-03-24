@@ -237,6 +237,13 @@ class GroupViewSet(DbAuthenticatedViewSet):
     queryset = AuthGroup.objects.all()
     serializer_class = GroupSerializer
 
+    def retrieve(self, request, pk):
+        permission = 'read_role'
+        if not self.has_permission(self.request.user, permission):
+            return Response({'permission': permission}, status=403)
+
+        return super().retrieve(request, pk)
+
     def list(self, request):
         permission = 'read_role'
         if not self.has_permission(self.request.user, permission):
@@ -249,7 +256,14 @@ class GroupViewSet(DbAuthenticatedViewSet):
             self.authenticate(request)
             serializer = GroupSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            permission = 'create_role'
+            try:
+                serializer.save()
+            except ProgrammingError as ex:
+                if f'does not have permission {permission}' in str(ex):
+                    return Response({'permission': permission}, status=403)
+                else:
+                    raise ex
             return Response(serializer.data, 201)
 
     def destroy(self, request, pk=None):
