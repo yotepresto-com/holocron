@@ -329,18 +329,32 @@ class UserRoleViewSet(DbAuthenticatedViewSet):
         user = get_object_or_404(AuthUser, pk=pk)
         serializer = UserRoleSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        permission = 'assign_role'
         with transaction.atomic():
             self.authenticate(request)
-            user.groups.add(serializer.validated_data['role_id'])
+            try:
+                user.groups.add(serializer.validated_data['role_id'])
+            except ProgrammingError as ex:
+                if f'does not have permission {permission}' in str(ex):
+                    return Response({'permission': permission}, status=403)
+                else:
+                    raise ex
 
         return Response(serializer.data, 201)
 
     def delete(self, request, user_id, role_id):
         user = get_object_or_404(AuthUser, pk=user_id)
         role = get_object_or_404(AuthGroup, pk=role_id)
+        permission = 'remove_role'
         with transaction.atomic():
             self.authenticate(request)
-            user.groups.remove(role)
+            try:
+                user.groups.remove(role)
+            except ProgrammingError as ex:
+                if f'does not have permission {permission}' in str(ex):
+                    return Response({'permission': permission}, status=403)
+                else:
+                    raise ex
 
         return Response(status=204)
 

@@ -266,3 +266,32 @@ class RolePermissionTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(RolePermission.objects.filter(role=self.group, permission='create_user').exists())
         self.assertFalse(RolePermission.objects.filter(role=self.group, permission='create_role').exists())
+
+
+class UserRoleTestCase(AuthenticatedTestCase):
+    def test_create_user_role(self):
+        self.group.role_permissions.create(role=self.group, permission='create_role')
+        group = AuthGroup.objects.create(name='test_group')
+        url = reverse('user_roles', kwargs={'pk': self.user.id})
+        data = {'role_id': group.id}
+        response = self.client.post(url, format='json', data=data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.group.role_permissions.create(role=self.group, permission='assign_role')
+        response = self.client.post(url, format='json', data=data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertTrue(self.user.groups.filter(id=group.id).exists())
+
+    def test_delete_user_role(self):
+        self.group.role_permissions.create(role=self.group, permission='create_role')
+        self.group.role_permissions.create(role=self.group, permission='assign_role')
+        group = AuthGroup.objects.create(name='test_group')
+        self.user.groups.add(group.id)
+        url = reverse('delete_user_roles', kwargs={'user_id': self.user.id, 'role_id': group.id})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.group.role_permissions.create(role=self.group, permission='remove_role')
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
