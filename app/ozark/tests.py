@@ -201,7 +201,6 @@ class GroupTestCase(AuthenticatedTestCase):
         self.test_group = AuthGroup.objects.create(name='test_group1')
 
         url = reverse('groups', kwargs={'pk':self.test_group.id})
-        print(url, 'aaa')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -209,3 +208,21 @@ class GroupTestCase(AuthenticatedTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], self.test_group.name)
+
+
+class ConfigTestCase(AuthenticatedTestCase):
+    def setUp(self):
+        super().setUp()
+
+    def test_list_permissions(self):
+        url = reverse('permissions')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.group.role_permissions.create(role=self.group, permission='read_permission')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
+        for per in response.data:
+            self.assertIsInstance(per, dict)
+            self.assertIn('permission', per)

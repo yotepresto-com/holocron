@@ -40,7 +40,7 @@ urlpatterns = [
 
 
     # permissions
-    path('permissions/', ConfigViewSet.as_view({'get': 'list_permissions'})),
+    path('permissions/', ConfigViewSet.as_view({'get': 'list_permissions'}), name='permissions'),
 
     # Profile Management
     #path('profiles/', ProfileViewSet.create_profile, name='create_profile'),

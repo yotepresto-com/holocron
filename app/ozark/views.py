@@ -72,6 +72,10 @@ class ConfigViewSet(DbAuthenticatedViewSet):
             return Response(serializer.data)
 
     def list_permissions(self, request):
+        permission = 'read_permission'
+        if not self.has_permission(self.request.user, permission):
+            return Response({'permission': permission}, status=403)
+
         sql = "SELECT unnest(enum_range(NULL::permission_type))::text as name order by 1;"
         res = []
         with connection.cursor() as cursor:
