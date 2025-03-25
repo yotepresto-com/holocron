@@ -167,3 +167,45 @@ class BlacklistTestCase(AuthenticatedTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], self.blacklist.name)
+
+class GroupTestCase(AuthenticatedTestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.url = reverse('groups')
+
+    def test_list_groups(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.group.role_permissions.create(role=self.group, permission='read_role')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['name'], 'group1')
+
+    def test_create_group(self):
+        data = {"name": "test_group2",}
+        response = self.client.post(self.url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.group.role_permissions.create(role=self.group, permission='create_role')
+        response = self.client.post(self.url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertTrue(AuthGroup.objects.filter(name="test_group2").exists())
+
+    def test_get_blacklist(self):
+        self.group.role_permissions.create(role=self.group, permission='create_role')
+        self.test_group = AuthGroup.objects.create(name='test_group1')
+
+        url = reverse('groups', kwargs={'pk':self.test_group.id})
+        print(url, 'aaa')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.group.role_permissions.create(role=self.group, permission='read_role')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], self.test_group.name)

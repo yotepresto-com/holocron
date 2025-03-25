@@ -28,8 +28,8 @@ urlpatterns = [
     path('users/<int:pk>/', UserViewSet.as_view({'get': 'retrieve', 'delete': 'destroy', 'put': 'update'}), name='users'),
 
     # groups
-    path('roles/', GroupViewSet.as_view({'get': 'list', 'post': 'create'})),
-    path('roles/<int:pk>/', GroupViewSet.as_view({'get': 'retrieve', 'delete': 'destroy', 'put': 'update'})),
+    path('roles/', GroupViewSet.as_view({'get': 'list', 'post': 'create'}), name='groups'),
+    path('roles/<int:pk>/', GroupViewSet.as_view({'get': 'retrieve', 'delete': 'destroy', 'put': 'update'}), name='groups'),
 
     # role permissions
     path('roles/<int:pk>/permissions/', RolePermissionViewSet.as_view({'get': 'get_role_permissions', 'post': 'create_role_permissions', 'delete': 'delete_role_permissions'})),
