@@ -32,7 +32,7 @@ urlpatterns = [
     path('roles/<int:pk>/', GroupViewSet.as_view({'get': 'retrieve', 'delete': 'destroy', 'put': 'update'}), name='groups'),
 
     # role permissions
-    path('roles/<int:pk>/permissions/', RolePermissionViewSet.as_view({'get': 'get_role_permissions', 'post': 'create_role_permissions', 'delete': 'delete_role_permissions'})),
+    path('roles/<int:pk>/permissions/', RolePermissionViewSet.as_view({'get': 'get_role_permissions', 'post': 'create_role_permissions', 'delete': 'delete_role_permissions'}), name='role_permissions'),
 
     # user roles
     path('users/<int:pk>/roles/', UserRoleViewSet.as_view({'post': 'create'})),

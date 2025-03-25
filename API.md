@@ -181,7 +181,7 @@ The server should return:
 
 ### 3.5. List All Permissions
 - **Endpoint:** `GET /permissions`
-- **Description:** Returns the list of all available permissions (from the `permission_type` enum) along with their descriptions.
+- **Description:** Returns the list of all available permissions (from the `permission_type` enum).
 - **Response:**
   - **200 OK** returns an array of permission objects, for example:
   ```json

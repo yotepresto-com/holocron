@@ -303,15 +303,20 @@ class RolePermissionViewSet(DbAuthenticatedViewSet):
 
         return Response(serializer.data, 201)
 
-
     def delete_role_permissions(self, request, pk):
         role = get_object_or_404(AuthGroup, pk=pk)
         serializer = MultipleRolePermissionsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
             self.authenticate(request)
-            for permission in serializer.validated_data['permissions']:
-                role.role_permissions.get(role=role, permission=permission).delete()
+            try:
+                for permission in serializer.validated_data['permissions']:
+                    role.role_permissions.get(role=role, permission=permission).delete()
+            except ProgrammingError as ex:
+                if f'does not have permission remove_permission' in str(ex):
+                    return Response({'permission': 'remove_permission'}, status=403)
+                else:
+                    raise ex
 
         return Response(serializer.data, 204)
 

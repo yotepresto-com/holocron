@@ -9,7 +9,7 @@ from django.db import connection, transaction
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import Group as AuthGroup
 
-from ozark.models import Person, NaturalPersonDetails, JuridicalPersonDetails, Blacklist
+from ozark.models import Person, NaturalPersonDetails, JuridicalPersonDetails, Blacklist, RolePermission
 
 
 class AuthenticatedTestCase(APITestCase):
@@ -226,3 +226,43 @@ class ConfigTestCase(AuthenticatedTestCase):
         for per in response.data:
             self.assertIsInstance(per, dict)
             self.assertIn('permission', per)
+
+
+class RolePermissionTestCase(AuthenticatedTestCase):
+    def setUp(self):
+        super().setUp()
+
+    def test_get_role_permissions(self):
+        self.group.role_permissions.create(role=self.group, permission='create_role')
+
+        url = reverse('role_permissions', kwargs={'pk': self.group.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.group.role_permissions.create(role=self.group, permission='read_permission')
+        response = self.client.get(url)
+        self.assertIsInstance(response.data, list)
+        self.assertTrue(len(response.data) > 2) # assign_permission, create_role and read_permission
+
+    def test_create_role_permissions(self):
+        url = reverse('role_permissions', kwargs={'pk': self.group.id})
+        data = {"permissions": ["delete_product", "create_product"]}
+        response = self.client.post(url, format='json', data=data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertTrue(RolePermission.objects.filter(role=self.group, permission='delete_product').exists())
+        self.assertTrue(RolePermission.objects.filter(role=self.group, permission='create_product').exists())
+
+    def test_delete_role_permissions(self):
+        url = reverse('role_permissions', kwargs={'pk': self.group.id})
+        data = {"permissions": ["create_user", "create_role"]}
+        self.group.role_permissions.create(role=self.group, permission='create_user')
+        self.group.role_permissions.create(role=self.group, permission='create_role')
+        response = self.client.delete(url, format='json', data=data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.group.role_permissions.create(role=self.group, permission='remove_permission')
+        response = self.client.delete(url, format='json', data=data)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(RolePermission.objects.filter(role=self.group, permission='create_user').exists())
+        self.assertFalse(RolePermission.objects.filter(role=self.group, permission='create_role').exists())
