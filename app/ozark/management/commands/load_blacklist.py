@@ -162,19 +162,6 @@ class Command(BaseCommand):
                 pass
                 # TODO: agregar otro registro con el otro nombre
 
-    def load_blacklist_format_3(self, reader, blacklist, options):
-        # TODO: implementar
-        return None
-
-        for i, row in enumerate(reader):
-            ID, Relative_ID, Record_Type, title, gender, first_name, last_name, full_name, other_names, Alternative_Script, function, specificfunction, category, ExPEPs, Date_Not_In_Charge_Since, DOB, POB, Country, Additional_Information, Country_Of_Origin, Country_Of_Activity = row
-
-            attributes = {}
-            attributes['gender'] = gender
-
-            if Date_Not_In_Charge_Since:
-                print(Date_Not_In_Charge_Since)
-
     def load_blacklist_format_4(self, reader, blacklist, options):
         for i, row in enumerate(reader):
             if i % 100 == 0:

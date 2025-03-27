@@ -392,3 +392,37 @@ class UnusualOperations(models.Model):
     class Meta:
         managed = False
         db_table = 'unusual_operations'
+
+
+class PepList(models.Model):
+    name = models.CharField(unique=True, max_length=30)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = False
+        db_table = 'pep_list'
+
+
+class PepPerson(models.Model):
+    pep_list = models.ForeignKey(PepList, models.DO_NOTHING)
+    curp = models.CharField(max_length=18, blank=True, null=True)
+    rfc = models.CharField(max_length=13, blank=True, null=True)
+    name = models.TextField(blank=True, null=True)
+    first_last_name = models.TextField(blank=True, null=True)
+    second_last_name = models.TextField(blank=True, null=True)
+    full_name = models.TextField(blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    category = models.TextField(blank=True, null=True)
+    date_not_in_charge_since = models.DateField(null=True, blank=True)
+    country = models.TextField(null=True, blank=True)
+    calculated_full_name = models.GeneratedField(expression=None,output_field=models.TextField(blank=True, null=True), db_persist=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(blank=True, null=True)
+    attributes = models.JSONField()
+
+    class Meta:
+        managed = False
+        db_table = 'pep_person'
