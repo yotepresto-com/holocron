@@ -72,7 +72,7 @@ BEGIN
         inner join person p on p.id = npd.person_id
     where p.deleted_at is null
         -- TODO: change the hardcoded 0.9 to a config
-        -- and compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9
+        and compute_match_score(npd.name, npd.first_last_name, npd.second_last_name, NEW.calculated_full_name) >= 0.9
     ;
   RETURN NEW;
 END;

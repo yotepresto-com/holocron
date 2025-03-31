@@ -55,6 +55,24 @@ BEGIN
   min_distance := (SELECT value::INTEGER FROM config WHERE name = 'max_string_distance_to_match');
   save_all_comparison_results := (SELECT value::BOOLEAN FROM config WHERE name = 'save_all_comparison_results');
 
+  -- PEPs
+    insert into pep_search (person_id, pep_person_id, match, match_score, search_date, match_details)
+    select
+        new.person_id,
+        pp.id,
+        compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, pp.calculated_full_name) >= 0.9,
+        compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, pp.calculated_full_name),
+        CURRENT_DATE,
+        json_build_object('rfc_match', pp.rfc = NEW.rfc, 'curp_match', pp.curp = NEW.curp,
+	        'name_match', levenshtein (pp.full_name, NEW.full_name) < min_distance, 'levenshtein_distance',
+	        levenshtein (pp.full_name, NEW.full_name))
+    from pep_person pp
+    where pp.deleted_at is null
+        and (pp.date_not_in_charge_since is null or (now() - pp.date_not_in_charge_since) < '2 years'::interval)
+    -- TODO: change the hardcoded 0.9 to a config
+        and compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, pp.calculated_full_name) >= 0.9
+    ;
+
   IF save_all_comparison_results IS TRUE THEN
     -- Blacklist
     INSERT INTO blacklist_search (person_id, blacklist_person_id, MATCH, match_score, search_date, match_details)
@@ -70,22 +88,6 @@ BEGIN
     FROM blacklist_natural_person_details bl_npd
         inner join blacklist_person bl_p on bl_p.id = bl_npd.blacklist_person_id
     where bl_p.deleted_at is null
-    ;
-
-    -- PEPs
-    insert into pep_search (person_id, pep_person_id, match, match_score, search_date, match_details)
-    select
-        new.person_id,
-        pp.id,
-        compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, pp.calculated_full_name) >= 0.9,
-        compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, pp.calculated_full_name),
-        CURRENT_DATE,
-        json_build_object('rfc_match', pp.rfc = NEW.rfc, 'curp_match', pp.curp = NEW.curp,
-	        'name_match', levenshtein (pp.full_name, NEW.full_name) < min_distance, 'levenshtein_distance',
-	        levenshtein (pp.full_name, NEW.full_name))
-    from pep_person pp
-    where pp.deleted_at is null
-        and (pp.date_not_in_charge_since is null or (now() - pp.date_not_in_charge_since) < '2 years'::interval)
     ;
 
   ELSE
@@ -128,25 +130,6 @@ BEGIN
         -- and compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, bl_npd.calculated_full_name) >= 0.9;
       ;
     END IF;
-
-    -- PEPs
-    insert into pep_search (person_id, pep_person_id, match, match_score, search_date, match_details)
-    select
-        new.person_id,
-        pp.id,
-        compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, pp.calculated_full_name) >= 0.9,
-        compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, bl_npd.calculated_full_name),
-        CURRENT_DATE,
-        json_build_object('rfc_match', bl_npd.rfc = NEW.rfc, 'curp_match', bl_npd.curp = NEW.curp,
-	        'name_match', levenshtein (bl_npd.full_name, NEW.full_name) < min_distance, 'levenshtein_distance',
-	        levenshtein (bl_npd.full_name, NEW.full_name))
-    from pep_person pp
-    where pp.deleted_at is null
-        and (pp.date_not_in_charge_since is null or (now() - pp.date_not_in_charge_since) < '2 years'::interval)
-        -- TODO: change the hardcoded 0.9 to a config
-        -- and compute_match_score(NEW.name, NEW.first_last_name, NEW.second_last_name, pp.calculated_full_name) >= 0.9
-    ;
-
   END IF;
   RETURN NEW;
 END;
