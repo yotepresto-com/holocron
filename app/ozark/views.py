@@ -1,3 +1,5 @@
+import json
+
 from django.db.models import Q
 from django.db import connection, transaction
 from rest_framework import viewsets, status
@@ -12,7 +14,7 @@ from django.contrib.auth.models import User as AuthUser, Group as AuthGroup
 
 
 from .models import Config, Product, Person, Profile, ProfileAttribute, BlacklistPerson, Blacklist, \
-    RolePermission
+    RolePermission, NaturalPersonDetails
 from .serializers import ConfigSerializer, ProductSerializer, PersonSerializer, BlacklistPersonSerializer, \
     ProfileSerializer, ProfileAttributeSerializer, BlacklistSerializer, UserSerializer, GroupSerializer, \
     RolePermissionSerializer, MultipleRolePermissionsSerializer, UserRoleSerializer
@@ -357,6 +359,124 @@ class UserRoleViewSet(DbAuthenticatedViewSet):
                     raise ex
 
         return Response(status=204)
+
+
+class SearchViewSet(DbAuthenticatedViewSet):
+    #serializer_class = UserRoleSerializer
+
+    def list(self, request, *args, **kwargs):
+        name = request.query_params.get('name') or None
+        first_last_name = request.query_params.get('first_last_name') or None
+        second_last_name = request.query_params.get('second_last_name') or None
+        min_score = request.query_params.get('min_score') or 0.9
+
+        sql = """
+        select *,
+            compute_match_score(%(name)s, %(first_last_name)s, %(second_last_name)s, npd.full_name) as score
+        from natural_person_details npd
+        where compute_match_score(%(name)s, %(first_last_name)s, %(second_last_name)s, npd.full_name) >= %(min_score)s
+        """
+
+        params = {
+            'name': name,
+            'first_last_name': first_last_name,
+            'second_last_name': second_last_name,
+            'min_score': min_score,
+        }
+        natural_persons = NaturalPersonDetails.objects.raw(sql, params)
+
+        natural_persons_res = []
+        for p in natural_persons:
+            natural_persons_res.append({
+                'name': p.name,
+                'first_last_name': p.first_last_name,
+                'second_last_name': p.second_last_name,
+                'curp': p.curp,
+                'rfc': p.rfc,
+                'full_name': p.full_name,
+                'score': p.score,
+            })
+
+        sql = """
+        select bl_npd.name, bl_npd.first_last_name, bl_npd.second_last_name,
+            bl_npd.calculated_full_name as full_name,
+            bl_npd.rfc, bl_npd.curp, bl_npd.date_of_birth as birth_date,
+            bl_p.created_at,
+            bl.name as blacklist_name, bl_p.attributes,
+            compute_match_score(%(name)s, %(first_last_name)s, %(second_last_name)s, bl_npd.calculated_full_name) as score
+        from blacklist_natural_person_details bl_npd
+            inner join blacklist_person bl_p on bl_p.id = bl_npd.blacklist_person_id
+            inner join blacklist bl on bl.id = bl_p.blacklist_id
+        where bl_p.deleted_at is null
+            and compute_match_score(%(name)s, %(first_last_name)s, %(second_last_name)s, bl_npd.calculated_full_name) >= %(min_score)s
+        ;
+        """
+
+        blacklist_res = []
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            for row in cursor.fetchall():
+                attributes = json.loads(row[9]) if row[9] else None
+                blacklist_res.append({
+                    'name': row[0],
+                    'first_last_name': row[1],
+                    'second_last_name': row[2],
+                    'full_name': row[3],
+                    'rfc': row[4],
+                    'curp': row[5],
+                    'birth_date': row[6],
+                    'created_at': row[7],
+                    'blacklist_name': row[8],
+                    'attributes': attributes,
+                    'score': row[10],
+                })
+
+        sql = """
+        select pp.name, pp.first_last_name, pp.second_last_name, pp.calculated_full_name as full_name,
+           pp.rfc, pp.curp, pp.date_of_birth as birth_date,
+           pp.created_at,
+           pp.date_not_in_charge_since,
+           pp.category,
+           pp.country,
+           pl.name as list,
+           pp.attributes,
+           compute_match_score(%(name)s, %(first_last_name)s, %(second_last_name)s, pp.calculated_full_name) as score
+        from pep_person pp
+            inner join pep_list pl on pl.id = pp.pep_list_id
+        where pp.deleted_at is null
+            and compute_match_score(%(name)s, %(first_last_name)s, %(second_last_name)s, pp.calculated_full_name) >= %(min_score)s
+        ;
+
+        """
+        pep_res = []
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            for row in cursor.fetchall():
+                attributes = json.loads(row[12]) if row[12] else None
+                pep_res.append({
+                    'name': row[0],
+                    'first_last_name': row[1],
+                    'second_last_name': row[2],
+                    'full_name': row[3],
+                    'rfc': row[4],
+                    'curp': row[5],
+                    'birth_date': row[6],
+                    'created_at': row[7],
+                    'date_not_in_charge_since': row[8],
+                    'category': row[9],
+                    'country': row[10],
+                    'list': row[11],
+                    'attributes': attributes,
+                    'score': row[13],
+                })
+
+        res = {
+            'users': natural_persons_res,
+            'blacklist_persons': blacklist_res,
+            'pep_res': pep_res,
+        }
+        return Response(res, status=200)
 
 
 class ProfileViewSet(DbAuthenticatedViewSet):
