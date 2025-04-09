@@ -49,6 +49,7 @@ class UserTestCase(AuthenticatedTestCase):
         self.group.role_permissions.create(role=self.group, permission='create_user')
         response = self.client.post(self.url, self.user_data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Token.objects.filter(user__username=self.user_data['username']).exists())
 
 
 class PersonTestCase(AuthenticatedTestCase):

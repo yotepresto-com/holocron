@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db.utils import ProgrammingError
 from django.shortcuts import get_object_or_404
+from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.authentication import TokenAuthentication
@@ -223,6 +224,7 @@ class UserViewSet(DbAuthenticatedViewSet):
             serializer.is_valid(raise_exception=True)
             try:
                 serializer.save()
+                Token.objects.create(user=serializer.instance)
             except ProgrammingError as ex:
                 if f'does not have permission {permission}' in str(ex):
                     return Response({'permission': permission}, status=403)
